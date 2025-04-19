@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Detalle del Símbolo</title>
+  <script>
+    // Verificar si el script del CDN se cargó correctamente
+    window.addEventListener('load', () => {
+      if (typeof LightweightCharts === 'undefined') {
+        document.getElementById("error-message").textContent = "Error: No se pudo cargar Lightweight Charts desde el CDN. Verifica tu conexión o el enlace del CDN.";
+        console.error("LightweightCharts no está definido. Verifica el enlace del CDN o tu conexión a internet.");
+      }
+    });
+  </script>
+  <!-- Usar una versión específica de Lightweight Charts (v3.8.0) -->
+  <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js" defer></script>
+  <style>
+    body {
+      background-color: #1a1a1a;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    .back-button {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .back-button button {
+      background-color: #00ff00;
+      color: #000000;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    .back-button button:hover {
+      background-color: #00cc00;
+    }
+    .header {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    h1 {
+      margin: 0;
+      text-align: center;
+      color: #00ff00;
+      font-size: 24px;
+      transition: color 0.1s ease;
+    }
+    h1 span {
+      color: #00ff00;
+    }
+    #local-time {
+      text-align: center;
+      margin-bottom: 5px;
+      color: #cccccc;
+      font-size: 14px;
+    }
+    #stats-timestamp {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    #stats-timestamp p {
+      margin: 2px 0;
+      color: #cccccc;
+    }
+    .container {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .panel {
+      flex: 1;
+      border: 1px solid #444;
+      background-color: #2f2f2f;
+      padding: 5px 10px 10px 10px;
+      min-width: 300px;
+    }
+    .title-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      width: 100%;
+      text-align: center;
+      margin-top: -5px;
+    }
+    h2 {
+      margin: 0;
+      color: #00ff00;
+      font-size: 20px;
+    }
+    .asks-title {
+      color: #ff0000;
+    }
+    .total-count {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .asks-total {
+      color: #ff0000;
+    }
+    .bids-total {
+      color: #55ff55;
+    }
+    .indicator-circle {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .indicator-circle-start {
+      margin-right: 5px;
+    }
+    .indicator-circle-end {
+      margin-left: 5px;
+    }
+    .circle-red {
+      background-color: #ff0000 !important;
+    }
+    .circle-green {
+      background-color: #00ff00 !important;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #2a2a2a;
+      border: 1px solid #444;
+      margin-bottom: 10px;
+      font-size: 12px;
+    }
+    th, td {
+      padding: 4px;
+      border: 1px solid #444;
+      position: relative;
+      cursor: pointer;
+      line-height: 1.2;
+    }
+    th {
+      background-color: #333;
+      color: #00ff00;
+      font-weight: 500;
+      text-align: center;
+    }
+    td {
+      text-align: center;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+    }
+    td span {
+      display: inline-block;
+      width: 100%;
+      text-align: center;
+      user-select: text;
+      -webkit-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
+    }
+    td::selection, td span::selection {
+      background: rgba(0, 255, 0, 0.3);
+    }
+    td::-moz-selection, td span::-moz-selection {
+      background: rgba(0, 255, 0, 0.3);
+    }
+    .ask-row { color: #cccccc; }
+    .bid-row { color: #cccccc; }
+    tr:hover { background-color: #3a3a3a; }
+    .highlight-top {
+      background-color: rgba(255, 255, 0, 0.2);
+      color: #ffffff;
+      font-weight: bold;
+    }
+    .color-transparent {
+      background-color: transparent;
+      transition: background-color 0.2s ease-out, color 0.2s ease-out;
+    }
+    .color-blue {
+      background-color: #090ef5;
+      transition: background-color 0.2s ease-out, color 0.2s ease-out;
+    }
+    .color-blue td {
+      color: #ffffff;
+    }
+    .color-yellow {
+      background-color: #e0f30a;
+      transition: background-color 0.2s ease-out, color 0.2s ease-out;
+    }
+    .color-yellow td {
+      color: #000000;
+    }
+    .color-orange {
+      background-color: #f5550f;
+      transition: background-color 0.2s ease-out, color 0.2s ease-out;
+    }
+    .color-orange td {
+      color: #000000;
+    }
+    .bold-row td {
+      font-weight: bold;
+    }
+    .highlight-red {
+      background-color: rgba(249, 12, 12, 0.5) !important;
+      transition: background-color 1s ease-out;
+    }
+    .highlight-red td {
+      color: #ffffff !important;
+      font-weight: bold;
+    }
+    tr.highlight-green {
+      background-color: #00ff00 !important;
+      transition: background-color 1s ease-out;
+    }
+    tr.highlight-green td {
+      color: #000000 !important;
+      font-weight: bold;
+    }
+    .legend {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-top: 10px;
+    }
+    .legend-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      border-radius: 3px;
+      font-size: 10px;
+      background-color: #2f2f2f;
+      color: #cccccc;
+      line-height: 1.2;
+    }
+    .legend .bid-updated-legend {
+      background-color: #00ff00 !important;
+      color: #000000 !important;
+    }
+    .copied {
+      background-color: rgba(0, 255, 0, 0.3);
+      transition: background-color 0.5s ease;
+    }
+    .price-cell:hover {
+      background-color: rgba(0, 255, 0, 0.1);
+      transition: none;
+    }
+    .highlight-total {
+      background-color: #004d00;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    .error-message {
+      color: #ff5555;
+      text-align: center;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+    #chart-container {
+      width: 100%;
+      height: 400px;
+      margin-top: 20px;
+      background-color: #2f2f2f;
+      border: 1px solid #444;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="back-button">
+    <button onclick="window.location.href='/'">Atrás</button>
+  </div>
+  <div class="header">
+    <h1 id="symbol-title"></h1>
+  </div>
+  <p id="local-time"></p>
+  <div id="stats-timestamp">
+    <p>diff orderbook Processed: <span id="diff-orderbook">0</span></p>
+    <p>Total prices processed: <span id="total-prices">0</span></p>
+  </div>
+  <div id="error-message" class="error-message"></div>
+
+  <div id="chart-container"></div>
+
+  <div class="container">
+    <div class="panel">
+      <div class="total-count bids-total" id="bids-total">BIDS - 0 | TOTAL: 0</div>
+      <div class="title-row">
+        <span class="indicator-circle indicator-circle-start" id="bids-indicator-start"></span>
+        <h2>Top Bids:</h2>
+        <span class="indicator-circle indicator-circle-end" id="bids-indicator-end"></span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Age</th>
+            <th>Price</th>
+            <th>QTY</th>
+            <th>USDT</th>
+            <th>% to price</th>
+            <th>Acc USDT</th>
+            <th>Acc QTY</th>
+            <th>Hits</th>
+            <th>Δ USDT</th>
+            <th>Δ QTY</th>
+          </tr>
+        </thead>
+        <tbody id="bids-body"></tbody>
+      </table>
+      <div class="legend">
+        <div class="legend-row bid-updated-legend" style="background-color: #00ff00 !important; color: #000000 !important;">Bid updated (Buy, Black Text)</div>
+        <div class="legend-row" style="background-color: #090ef5 !important; color: #ffffff !important;">Bids Within 0.5% to 1% of markPrice (White Text)</div>
+        <div class="legend-row" style="background-color: #e0f30a !important; color: #000000 !important;">Bids Within 0.1% to 0.5% of markPrice (Black Text)</div>
+        <div class="legend-row" style="background-color: #f5550f !important; color: #000000 !important;">Bids Within 0.1% of markPrice (Black Text)</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="total-count asks-total" id="asks-total">ASKS - 0 | TOTAL: 0</div>
+      <div class="title-row">
+        <span class="indicator-circle indicator-circle-start" id="asks-indicator-start"></span>
+        <h2 class="asks-title">Top Asks:</h2>
+        <span class="indicator-circle indicator-circle-end" id="asks-indicator-end"></span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Age</th>
+            <th>Price</th>
+            <th>QTY</th>
+            <th>USDT</th>
+            <th>% to price</th>
+            <th>Acc USDT</th>
+            <th>Acc QTY</th>
+            <th>Hits</th>
+            <th>Δ USDT</th>
+            <th>Δ QTY</th>
+          </tr>
+        </thead>
+        <tbody id="asks-body"></tbody>
+      </table>
+      <div class="legend">
+        <div class="legend-row" style="background-color: rgba(249, 12, 12, 0.5) !important; color: #ffffff !important;">Ask updated (Sell, White Text)</div>
+        <div class="legend-row" style="background-color: #090ef5 !important; color: #ffffff !important;">Asks Within 0.5% to 1% of markPrice (White Text)</div>
+        <div class="legend-row" style="background-color: #e0f30a !important; color: #000000 !important;">Asks Within 0.1% to 0.5% of markPrice (Black Text)</div>
+        <div class="legend-row" style="background-color: #f5550f !important; color: #000000 ! #important;">Asks Within 0.1% of markPrice (Black Text)</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const symbol = params.get("symbol") || "BTCUSDT";
+
+    document.getElementById("symbol-title").innerText = `${symbol}: 0.0000 USDT`;
+    const tickerWsUrl = `wss://stream.binance.com:9443/ws/!miniTicker@arr`;
+    const depthWsUrl = `wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@depth@100ms`;
+    const klineWsUrl = `wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_1h`;
+
+    let currentPrice = 0;
+    let asksData = [];
+    let bidsData = [];
+    let asksProcessed = 0;
+    let bidsProcessed = 0;
+    let diffOrderbookProcessed = 0;
+    let pendingUpdate = false;
+    let lastPriceUpdateTime = 0;
+    let lastDepthUpdateTime = 0;
+    let isInteracting = false;
+    const rowColors = new Map();
+    const COLOR_DURATION_MS = 5000;
+    const NUMBER_OF_ZONES = 10;
+
+    const errorMessageElement = document.getElementById("error-message");
+
+    function showError(message) {
+      errorMessageElement.textContent = message;
+      console.error(message);
+    }
+
+    // Chart Setup
+    let chart = null;
+    let candlestickSeries = null;
+    const liquidityLines = [];
+
+    function initializeChart() {
+      try {
+        if (typeof LightweightCharts === 'undefined') {
+          throw new Error("LightweightCharts no está disponible. Verifica el enlace del CDN.");
+        }
+
+        const chartContainer = document.getElementById("chart-container");
+        if (!chartContainer) {
+          throw new Error("Contenedor del gráfico no encontrado (#chart-container).");
+        }
+
+        chart = LightweightCharts.createChart(chartContainer, {
+          width: chartContainer.offsetWidth,
+          height: 400,
+          layout: {
+            backgroundColor: '#2f2f2f',
+            textColor: '#d1d4dc',
+          },
+          grid: {
+            vertLines: { color: '#444' },
+            horzLines: { color: '#444' },
+          },
+          timeScale: {
+            timeVisible: true,
+            secondsVisible: false,
+          },
+          rightPriceScale: {
+            borderColor: '#444',
+          },
+        });
+
+        // Verificar si chart tiene los métodos esperados
+        if (typeof chart.addCandlestickSeries !== 'function') {
+          throw new Error("chart.addCandlestickSeries no es una función. Versión de Lightweight Charts incompatible.");
+        }
+        if (typeof chart.addLineSeries !== 'function') {
+          throw new Error("chart.addLineSeries no es una función. Versión de Lightweight Charts incompatible.");
+        }
+
+        candlestickSeries = chart.addCandlestickSeries({
+          upColor: '#00ff00',
+          downColor: '#ff0000',
+          borderVisible: false,
+          wickUpColor: '#00ff00',
+          wickDownColor: '#ff0000',
+        });
+
+        chart.applyOptions({
+          priceScale: {
+            scaleMargins: { top: 0.1, bottom: 0.1 },
+          },
+        });
+
+        console.log("Gráfico inicializado correctamente con Lightweight Charts v3.8.0");
+      } catch (err) {
+        showError(`Error al inicializar el gráfico: ${err.message}`);
+        chart = null;
+        candlestickSeries = null;
+      }
+    }
+
+    // Inicializar el gráfico después de que el DOM esté completamente cargado
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeChart();
+    });
+
+    // Kline WebSocket for Candlestick Data
+    let lastCandle = null;
+    const klineSocket = new WebSocket(klineWsUrl);
+    klineSocket.onopen = () => {
+      console.log("Kline WebSocket connected");
+    };
+    klineSocket.onerror = (error) => {
+      showError("Error in Kline WebSocket connection. Check network or Binance API status.");
+    };
+    klineSocket.onclose = () => {
+      showError("Kline WebSocket closed. Attempting to reconnect...");
+      setTimeout(() => {
+        const newSocket = new WebSocket(klineWsUrl);
+        newSocket.onopen = klineSocket.onopen;
+        newSocket.onerror = klineSocket.onerror;
+        newSocket.onclose = klineSocket.onclose;
+        newSocket.onmessage = klineSocket.onmessage;
+      }, 5000);
+    };
+    klineSocket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("Kline WebSocket data:", data);
+
+        const kline = data.k;
+        if (!kline) {
+          console.warn("Kline data no contiene 'k'. Datos recibidos:", data);
+          return;
+        }
+
+        const time = Math.floor(kline.t / 1000);
+        const open = parseFloat(kline.o);
+        const high = parseFloat(kline.h);
+        const low = parseFloat(kline.l);
+        const close = parseFloat(kline.c);
+
+        if (isNaN(time) || isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close)) {
+          console.warn("Datos de Kline inválidos:", { time, open, high, low, close });
+          return;
+        }
+
+        const candleData = { time, open, high, low, close };
+
+        if (!candlestickSeries) {
+          console.warn("candlestickSeries no está inicializada. Omitiendo actualización de velas.");
+          return;
+        }
+
+        if (lastCandle && lastCandle.time === time) {
+          candlestickSeries.update(candleData);
+          console.log("Vela actualizada:", candleData);
+        } else {
+          candlestickSeries.setData([...(lastCandle ? [lastCandle] : []), candleData]);
+          chart.timeScale().fitContent();
+          console.log("Nueva vela añadida:", candleData);
+        }
+        lastCandle = candleData;
+      } catch (err) {
+        showError(`Error parsing Kline WebSocket message: ${err.message}`);
+        console.error("Error details:", err);
+      }
+    };
+
+    // Function to Update Liquidity Levels
+    function updateLiquidityLevels() {
+      if (!currentPrice || !chart || typeof chart.addLineSeries !== 'function') {
+        console.warn("No se puede actualizar niveles de liquidez: chart no está inicializado o addLineSeries no está disponible.");
+        return;
+      }
+
+      // Limpiar líneas anteriores
+      liquidityLines.forEach(line => {
+        line.series.setData([]);
+        chart.removeSeries(line.series);
+      });
+      liquidityLines.length = 0;
+
+      const minPrice = currentPrice * 0.9;
+      const maxPrice = currentPrice * 1.1;
+      const priceRange = (maxPrice - minPrice) / NUMBER_OF_ZONES;
+
+      const buckets = {};
+      for (let price = Math.floor(minPrice / priceRange) * priceRange; price <= maxPrice; price += priceRange) {
+        buckets[price.toFixed(2)] = { usdt: 0, qty: 0 };
+      }
+
+      [...asksData, ...bidsData].forEach(item => {
+        const bucketPrice = (Math.floor(item.price / priceRange) * priceRange).toFixed(2);
+        if (buckets[bucketPrice]) {
+          buckets[bucketPrice].usdt += item.usdt;
+          buckets[bucketPrice].qty += item.qty;
+        }
+      });
+
+      const topBuckets = Object.entries(buckets)
+        .sort((a, b) => b[1].usdt - a[1].usdt)
+        .slice(0, NUMBER_OF_ZONES);
+
+      topBuckets.forEach(([price, data], index) => {
+        const priceValue = parseFloat(price);
+        const color = priceValue > currentPrice ? '#ff9900' : '#00ff00';
+        const lineSeries = chart.addLineSeries({
+          color: color,
+          lineWidth: 1,
+          priceLineVisible: false,
+          lastValueVisible: false,
+        });
+
+        const now = Math.floor(Date.now() / 1000);
+        lineSeries.setData([
+          { time: now - 86400, value: priceValue },
+          { time: now, value: priceValue },
+        ]);
+
+        lineSeries.createPriceLine({
+          price: priceValue,
+          color: color,
+          lineWidth: 1,
+          lineStyle: LightweightCharts.LineStyle.Solid,
+          title: `A: ${formatUsdt(data.usdt)} | V: ${formatQty(data.qty)}`,
+        });
+
+        liquidityLines.push({ series: lineSeries, price: priceValue });
+      });
+
+      console.log("Niveles de liquidez actualizados:", topBuckets);
+    }
+
+    setInterval(() => {
+      if (chart) {
+        updateLiquidityLevels();
+      }
+    }, 5000);
+
+    window.addEventListener('resize', () => {
+      if (chart) {
+        chart.resize(document.getElementById("chart-container").offsetWidth, 400);
+      }
+    });
+
+    function setupEventListeners() {
+      document.querySelectorAll('#asks-body, #bids-body').forEach(tableBody => {
+        tableBody.addEventListener('mouseover', (event) => {
+          if (event.target.closest('.price-cell')) {
+            isInteracting = true;
+            console.log('Interaction started: mouseover on Price cell');
+          }
+        });
+        tableBody.addEventListener('mouseout', (event) => {
+          if (event.target.closest('.price-cell')) {
+            setTimeout(() => {
+              isInteracting = false;
+              console.log('Interaction ended: mouseout from Price cell');
+            }, 500);
+          }
+        });
+        tableBody.addEventListener('mousedown', (event) => {
+          const cell = event.target.closest('.price-cell');
+          if (cell) {
+            isInteracting = true;
+            console.log('Interaction started: mousedown on Price cell');
+            handleSelection(event);
+          }
+        });
+        tableBody.addEventListener('click', (event) => {
+          const priceCell = event.target.closest('.price-cell');
+          if (priceCell) {
+            copyPriceCell(event);
+          }
+        });
+      });
+    }
+
+    const tickerSocket = new WebSocket(tickerWsUrl);
+    tickerSocket.onopen = () => {
+      console.log("Ticker WebSocket connected");
+    };
+    tickerSocket.onerror = (error) => {
+      showError("Error in Ticker WebSocket connection. Check network or Binance API status.");
+    };
+    tickerSocket.onclose = () => {
+      showError("Ticker WebSocket closed. Attempting to reconnect...");
+      setTimeout(() => {
+        const newSocket = new WebSocket(tickerWsUrl);
+        newSocket.onopen = tickerSocket.onopen;
+        newSocket.onerror = tickerSocket.onerror;
+        newSocket.onclose = tickerSocket.onclose;
+        newSocket.onmessage = tickerSocket.onmessage;
+      }, 5000);
+    };
+    tickerSocket.onmessage = (event) => {
+      const startTime = performance.now();
+      try {
+        const data = JSON.parse(event.data);
+        const symbolData = data.find(item => item.s === symbol.toUpperCase());
+        if (symbolData) {
+          const newPrice = parseFloat(symbolData.c);
+          console.log(`Ticker update: currentPrice=${currentPrice}, newPrice=${newPrice}`);
+          currentPrice = newPrice;
+          document.getElementById("symbol-title").innerText = `${symbol}: ${formatPrice(currentPrice)} USDT`;
+
+          const endTime = performance.now();
+          const timeSinceLastUpdate = startTime - lastPriceUpdateTime;
+          lastPriceUpdateTime = startTime;
+          console.log(`Tiempo de actualización del precio: ${(endTime - startTime).toFixed(2)}ms`);
+          console.log(`Tiempo desde la última actualización del precio: ${timeSinceLastUpdate.toFixed(2)}ms`);
+
+          updateTimestamp();
+          scheduleTableUpdate();
+        }
+      } catch (err) {
+        showError(`Error parsing Ticker WebSocket message: ${err.message}`);
+      }
+    };
+
+    const depthSocket = new WebSocket(depthWsUrl);
+    depthSocket.onopen = () => {
+      console.log("Depth WebSocket connected");
+    };
+    depthSocket.onerror = (error) => {
+      showError("Error in Depth WebSocket connection. Check network, symbol, or Binance API status.");
+    };
+    depthSocket.onclose = () => {
+      showError("Depth WebSocket closed. Attempting to reconnect...");
+      setTimeout(() => {
+        const newSocket = new WebSocket(depthWsUrl);
+        newSocket.onopen = depthSocket.onopen;
+        newSocket.onerror = depthSocket.onerror;
+        newSocket.onclose = depthSocket.onclose;
+        newSocket.onmessage = depthSocket.onmessage;
+      }, 5000);
+    };
+    depthSocket.onmessage = (event) => {
+      const startTime = performance.now();
+      try {
+        const data = JSON.parse(event.data);
+        const now = Date.now();
+
+        console.log("Received WebSocket data:", JSON.stringify(data));
+
+        if (data.a) {
+          console.log(`Processing ${data.a.length} ask updates:`, data.a);
+          asksData = updateOrders(asksData, data.a, now, true);
+          asksProcessed += data.a.length;
+        }
+        if (data.b) {
+          console.log(`Processing ${data.b.length} bid updates:`, data.b);
+          bidsData = updateOrders(bidsData, data.b, now, false);
+          bidsProcessed += data.b.length;
+        }
+
+        diffOrderbookProcessed = Math.abs(asksProcessed - bidsProcessed);
+
+        if (currentPrice > 0) {
+          asksData = asksData.filter(item => {
+            const diff = Math.abs((item.price - currentPrice) / currentPrice) * 100;
+            return diff <= 10;
+          });
+          bidsData = bidsData.filter(item => {
+            const diff = Math.abs((item.price - currentPrice) / currentPrice) * 100;
+            return diff <= 10;
+          });
+        }
+
+        asksData.sort((a, b) => b.usdt - a.usdt);
+        bidsData.sort((a, b) => b.usdt - a.usdt);
+
+        asksData = asksData.slice(0, 30);
+        bidsData = bidsData.slice(0, 30);
+
+        document.getElementById("diff-orderbook").innerText = diffOrderbookProcessed.toLocaleString();
+        document.getElementById("asks-total").innerText = `ASKS - ${asksData.length} | TOTAL: ${asksProcessed.toLocaleString()}`;
+        document.getElementById("bids-total").innerText = `BIDS - ${bidsData.length} | TOTAL: ${bidsProcessed.toLocaleString()}`;
+        const totalPrices = asksProcessed + bidsProcessed;
+        document.getElementById("total-prices").innerText = totalPrices.toLocaleString();
+
+        if (totalPrices > 250000) {
+          document.getElementById("total-prices").classList.add("highlight-total");
+        }
+
+        const asksIndicatorStart = document.getElementById("asks-indicator-start");
+        const asksIndicatorEnd = document.getElementById("asks-indicator-end");
+        const bidsIndicatorStart = document.getElementById("bids-indicator-start");
+        const bidsIndicatorEnd = document.getElementById("bids-indicator-end");
+        asksIndicatorStart.classList.remove("circle-red", "circle-green");
+        asksIndicatorEnd.classList.remove("circle-red", "circle-green");
+        bidsIndicatorStart.classList.remove("circle-red", "circle-green");
+        bidsIndicatorEnd.classList.remove("circle-red", "circle-green");
+        if (asksProcessed > bidsProcessed) {
+          asksIndicatorStart.classList.add("circle-red");
+          asksIndicatorEnd.classList.add("circle-red");
+          console.log(`Asks processed (${asksProcessed}) > Bids processed (${bidsProcessed}): Showing red circles for Top Asks`);
+        } else if (bidsProcessed > asksProcessed) {
+          bidsIndicatorStart.classList.add("circle-green");
+          bidsIndicatorEnd.classList.add("circle-green");
+          console.log(`Bids processed (${bidsProcessed}) > Asks processed (${asksProcessed}): Showing green circles for Top Bids`);
+        }
+
+        scheduleTableUpdate();
+      } catch (err) {
+        showError(`Error processing Depth WebSocket message: ${err.message}`);
+      }
+    };
+
+    function scheduleTableUpdate() {
+      if (!pendingUpdate && !isInteracting) {
+        pendingUpdate = true;
+        requestAnimationFrame(() => {
+          updateTables();
+          pendingUpdate = false;
+          console.log('Table updated');
+        });
+      } else if (isInteracting) {
+        console.log('Table update skipped: user is interacting with Price cell');
+      }
+    }
+
+    function updateOrders(existingOrders, newOrders, now, isAsk) {
+      const ordersMap = new Map(existingOrders.map(o => [o.price, o]));
+
+      newOrders.forEach(([p, q]) => {
+        const price = parseFloat(p);
+        const qty = parseFloat(q);
+        const usdt = price * qty;
+
+        console.log(`Processing update: price=${price}, qty=${qty}, usdt=${usdt}`);
+
+        if (qty === 0) {
+          ordersMap.delete(price);
+          rowColors.delete(price);
+          console.log(`Price ${price} removed`);
+        } else {
+          if (ordersMap.has(price)) {
+            const existing = ordersMap.get(price);
+            const previousHits = existing.hits || 0;
+            const previousQty = existing.qty || 0;
+            const previousUsdt = existing.usdt || 0;
+
+            existing.qty = qty;
+            existing.usdt = usdt;
+            existing.lastUpdated = now;
+            existing.hits = previousHits + 1;
+            existing.colorAssignedTime = now;
+            existing.deltaUsdt = usdt - previousUsdt;
+            existing.deltaQty = qty - previousQty;
+
+            console.log(`Price ${price} updated: hits=${existing.hits}, qty=${qty}, usdt=${usdt}, deltaUsdt=${existing.deltaUsdt}, deltaQty=${existing.deltaQty}, lastUpdated=${existing.lastUpdated}`);
+          } else {
+            ordersMap.set(price, {
+              price,
+              qty,
+              usdt,
+              lastUpdated: now,
+              colorAssignedTime: now,
+              hits: 1,
+              deltaUsdt: 0,
+              deltaQty: 0,
+            });
+            console.log(`New price ${price} added: hits=1, qty=${qty}, usdt=${usdt}, lastUpdated=${now}`);
+          }
+        }
+      });
+
+      return Array.from(ordersMap.values());
+    }
+
+    function getColorClass(price, markPrice, isAsk, colorAssignedTime, now) {
+      const diff = ((price - markPrice) / markPrice) * 100;
+      const absDiff = Math.abs(diff);
+      const colorAge = now - colorAssignedTime;
+
+      if (colorAge > COLOR_DURATION_MS) {
+        console.log(`Price ${price}: color expired after ${colorAge}ms, setting color-transparent`);
+        return "color-transparent";
+      }
+
+      let colorClass;
+      if (absDiff <= 0.1) {
+        colorClass = "color-orange";
+      } else if (absDiff > 0.1 && absDiff <= 0.5) {
+        colorClass = "color-yellow";
+      } else if (absDiff > 0.5 && absDiff <= 1) {
+        colorClass = "color-blue";
+      } else {
+        colorClass = "color-transparent";
+      }
+
+      console.log(`Price ${price}: markPrice=${markPrice}, absDiff=${absDiff.toFixed(3)}%, color=${colorClass}`);
+      return colorClass;
+    }
+
+    function updateTables() {
+      updateTable("asks-body", asksData, currentPrice, true);
+      updateTable("bids-body", bidsData, currentPrice, false);
+    }
+
+    function updateTable(tableId, data, markPrice, isAsk) {
+      const tableBody = document.getElementById(tableId);
+      const now = Date.now();
+
+      const existingRows = new Map();
+      Array.from(tableBody.children).forEach(row => {
+        const price = parseFloat(row.cells[2].textContent);
+        existingRows.set(price, row);
+      });
+
+      let accUsdt = 0;
+      let accQty = 0;
+
+      const fragment = document.createDocumentFragment();
+      data.forEach((item, idx) => {
+        const ageTime = formatAge(now - item.lastUpdated);
+        console.log(`Calculating age for price ${item.price}: now=${now}, lastUpdated=${item.lastUpdated}, age=${ageTime}`);
+        const pct = markPrice ? (((item.price - markPrice) / markPrice) * 100).toFixed(3) : "---";
+        
+        accUsdt += item.usdt;
+        accQty += item.qty;
+
+        let row = existingRows.get(item.price);
+        if (!row) {
+          row = document.createElement("tr");
+          row.className = isAsk ? "ask-row" : "bid-row";
+        }
+
+        if (idx < 4) {
+          row.classList.add("highlight-top");
+        } else {
+          row.classList.remove("highlight-top");
+        }
+
+        const newColorClass = getColorClass(item.price, markPrice, isAsk, item.colorAssignedTime || now, now);
+        row.classList.remove("color-transparent", "color-blue", "color-yellow", "color-orange");
+        row.classList.add(newColorClass);
+        rowColors.set(item.price, newColorClass);
+
+        if (newColorClass !== "color-transparent") {
+          row.classList.add("bold-row");
+        } else {
+          row.classList.remove("bold-row");
+        }
+
+        const recentlyUpdated = item.lastUpdated && (now - item.lastUpdated) <= 1000;
+        if (recentlyUpdated) {
+          console.log(`Applying highlight for price ${item.price}: isAsk=${isAsk}, recentlyUpdated=${recentlyUpdated}`);
+          const highlightClass = isAsk ? "highlight-red" : "highlight-green";
+          row.classList.remove("highlight-red", "highlight-green");
+          row.classList.add(highlightClass);
+
+          setTimeout(() => {
+            row.classList.remove("highlight-red", "highlight-green");
+            row.classList.remove("color-transparent", "color-blue", "color-yellow", "color-orange");
+            const updatedColorClass = getColorClass(item.price, currentPrice, isAsk, item.colorAssignedTime || now, now);
+            row.classList.add(updatedColorClass);
+            rowColors.set(item.price, updatedColorClass);
+            if (updatedColorClass !== "color-transparent") {
+              row.classList.add("bold-row");
+            } else {
+              row.classList.remove("bold-row");
+            }
+            console.log(`Reapplied color class for price ${item.price}: ${updatedColorClass}`);
+          }, 1000);
+        } else {
+          row.classList.remove("highlight-red", "highlight-green");
+        }
+
+        row.innerHTML = `
+          <td><span>${idx + 1}</span></td>
+          <td class="age-cell"><span>${ageTime}</span></td>
+          <td class="price-cell"><span>${formatPrice(item.price)}</span></td>
+          <td><span>${formatQty(item.qty)}</span></td>
+          <td><span>${formatUsdt(item.usdt)}</span></td>
+          <td><span>${pct !== "---" ? pct + "%" : "---"}</span></td>
+          <td><span>${formatUsdt(accUsdt)}</span></td>
+          <td><span>${formatQty(accQty)}</span></td>
+          <td><span>${item.hits}</span></td>
+          <td><span>${item.deltaUsdt ? formatUsdt(item.deltaUsdt) : "0"}</span></td>
+          <td><span>${item.deltaQty ? formatQty(item.deltaQty) : "0"}</span></td>
+        `;
+        fragment.appendChild(row);
+        existingRows.delete(item.price);
+      });
+
+      existingRows.forEach(row => {
+        const price = parseFloat(row.cells[2].textContent);
+        rowColors.delete(price);
+        row.remove();
+      });
+      tableBody.appendChild(fragment);
+    }
+
+    function updateAgeColumns() {
+      const now = Date.now();
+      ["asks-body", "bids-body"].forEach(tableId => {
+        const tableBody = document.getElementById(tableId);
+        Array.from(tableBody.children).forEach(row => {
+          const price = parseFloat(row.cells[2].textContent);
+          const data = tableId === "asks-body" ? asksData : bidsData;
+          const item = data.find(item => item.price === price);
+          if (item) {
+            const ageTime = formatAge(now - item.lastUpdated);
+            row.cells[1].querySelector('span').textContent = ageTime;
+          }
+        });
+      });
+    }
+
+    setInterval(updateAgeColumns, 100);
+
+    function handleSelection(event) {
+      const cell = event.target.closest('.price-cell');
+      if (!cell) return;
+      const span = cell.querySelector('span');
+      if (!span) return;
+
+      const selection = window.getSelection();
+      if (!selection.toString()) {
+        const range = document.createRange();
+        range.selectNodeContents(span);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+
+      console.log(`Selected Price cell content: ${span.textContent}`);
+      event.preventDefault();
+    }
+
+    function copyPriceCell(event) {
+      const cell = event.target.closest('.price-cell');
+      if (!cell) return;
+      const text = cell.textContent.trim();
+      
+      if (!text) {
+        console.error("No text to copy in Price cell");
+        return;
+      }
+
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+          cell.classList.add("copied");
+          setTimeout(() => cell.classList.remove("copied"), 500);
+          console.log(`Precio copiado: ${text}`);
+          isInteracting = false;
+        }).catch(err => {
+          console.error("Error al copiar el precio con navigator.clipboard:", err.message);
+          fallbackCopyText(text, cell);
+        });
+      } else {
+        console.warn("navigator.clipboard no disponible o contexto no seguro, usando fallback");
+        fallbackCopyText(text, cell);
+      }
+
+      event.preventDefault();
+    }
+
+    function fallbackCopyText(text, cell) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        cell.classList.add("copied");
+        setTimeout(() => cell.classList.remove("copied"), 500);
+        console.log(`Precio copiado con fallback: ${text}`);
+        isInteracting = false;
+      } catch (err) {
+        console.error("Error al copiar con fallback:", err.message);
+      } finally {
+        document.body.removeChild(textArea);
+      }
+    }
+
+    function formatPrice(price) {
+      const decimals = getDecimalPlaces(symbol);
+      return price.toFixed(decimals).replace(/(\.\d+?)0+$/, "$1");
+    }
+
+    function getDecimalPlaces(symbol) {
+      const decimalPlaces = {
+        "USDT": 2,
+        "ETHUSDT": 4,
+        "PEPEUSDT": 8,
+        "SHIBUSDT": 8,
+        "BTCUSDT": 2,
+        "XRPUSDT": 4,
+        "SOLUSDT": 4
+      };
+      return decimalPlaces[symbol] || 4;
+    }
+
+    function formatQty(qty) {
+      if (qty >= 1000) return (qty / 1000).toFixed(2) + "K";
+      return qty.toFixed(3);
+    }
+
+    function formatAge(milliseconds) {
+      if (milliseconds < 0) {
+        console.warn(`Negative age detected: ${milliseconds}ms`);
+        return "00:00:00";
+      }
+      const totalSeconds = Math.floor(milliseconds / 1000);
+      const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+      const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+      const seconds = String(totalSeconds % 60).padStart(2, "0");
+      return `${hours}:${minutes}:${seconds}`;
+    }
+
+    function updateTimestamp() {
+      const now = new Date();
+      const offset = -4 * 60;
+      const localTime = new Date(now.getTime() + (offset * 60 * 1000));
+      const options = {
+        weekday: 'short',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        fractionalSecondDigits: 1,
+        hour12: true,
+        timeZone: 'UTC'
+      };
+      const formattedDate = localTime.toLocaleString('en-US', options)
+        .replace(',', '')
+        .replace(/\//g, '/')
+        .replace(' AM', ' AM')
+        .replace(' PM', ' PM');
+      document.getElementById('local-time').textContent = `${formattedDate} GMT-04:00`;
+    }
+
+    function formatUsdt(value) {
+      if (value >= 1.0e6) return (value / 1.0e6).toFixed(2) + "M";
+      if (value >= 1.0e3) return (value / 1.0e3).toFixed(2) + "K";
+      return value.toFixed(2);
+    }
+
+    setupEventListeners();
+    setInterval(updateTimestamp, 50);
+  </script>
+</body>
+</html>
