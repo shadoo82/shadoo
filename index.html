@@ -16,7 +16,7 @@
       }
     });
   </script>
-  <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js" defer></script>
+  <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js" defer></script>
   <style>
     body {
       background-color: #1a1a1a;
@@ -333,6 +333,7 @@
   <div id="stats-timestamp">
     <p>diff orderbook Processed: <span id="diff-orderbook">0</span></p>
     <p>Total prices processed: <span id="total-prices">0</span></p>
+    <p>WebSocket Status: <span id="websocket-status">Connecting...</span></p>
   </div>
   <div id="error-message" class="error-message"></div>
 
@@ -423,7 +424,7 @@
     let currentTimeframe = "1h";
     let tickerWsUrl = `wss://stream.binance.com:9443/ws/!miniTicker@arr`;
     let depthWsUrl = `wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@depth@100ms`;
-    let klineWsUrl = `wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_${currentTimeframe}`;
+    let klineWsUrl = `wss://stream.binance.com:443/ws/${symbol.toLowerCase()}@kline_${currentTimeframe}`;
     let klineRestUrl = `https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}&interval=${currentTimeframe}&limit=100`;
     console.log("URLs configuradas:", { tickerWsUrl, depthWsUrl, klineWsUrl, klineRestUrl });
 
@@ -437,12 +438,30 @@
     let lastPriceUpdateTime = 0;
     let lastDepthUpdateTime = 0;
     let isInteracting = false;
+    const INTERACTION_TIMEOUT_MS = 500;
     const rowColors = new Map();
     const COLOR_DURATION_MS = 5000;
     let selectedPrices = new Map();
+    let lastTableUpdate = 0;
+    const TABLE_UPDATE_DEBOUNCE_MS = 50;
+    let klineReconnectAttempts = 0;
+    const RECONNECT_DELAY_MS = 5000;
 
     const errorMessageElement = document.getElementById("error-message");
     const debugMessageElement = document.getElementById("debug-message");
+    const websocketStatusElement = document.getElementById("websocket-status");
+
+    let tickerSocketConnected = false;
+    let depthSocketConnected = false;
+    let klineSocketConnected = false;
+
+    function updateWebSocketStatus() {
+      const allConnected = tickerSocketConnected && depthSocketConnected && klineSocketConnected;
+      const statusText = allConnected ? "All WebSockets Connected" : "Some WebSockets Disconnected";
+      websocketStatusElement.textContent = statusText;
+      websocketStatusElement.style.color = allConnected ? "#00ff00" : "#ff5555";
+      console.log("Estado de WebSockets actualizado:", statusText);
+    }
 
     function showError(message) {
       errorMessageElement.textContent = message;
@@ -457,6 +476,8 @@
     let chart = null;
     let candlestickSeries = null;
     let candlesData = [];
+    let lastHoveredPrice = null;
+    let markerTimeout = null;
 
     function initializeChart() {
       console.log("Inicializando gráfico...");
@@ -470,11 +491,18 @@
           throw new Error("Contenedor del gráfico no encontrado (#chart-container).");
         }
 
+        console.log("Dimensiones del contenedor del gráfico:", chartContainer.offsetWidth, "x", chartContainer.offsetHeight);
+        if (chartContainer.offsetWidth === 0 || chartContainer.offsetHeight === 0) {
+          console.warn("El contenedor del gráfico tiene dimensiones 0. Reintentando inicialización...");
+          setTimeout(initializeChart, 500);
+          return;
+        }
+
         chart = LightweightCharts.createChart(chartContainer, {
           width: chartContainer.offsetWidth,
           height: 400,
           layout: {
-            backgroundColor: '#2f2f2f',
+            background: { type: 'solid', color: '#2f2f2f' },
             textColor: '#d1d4dc',
           },
           grid: {
@@ -487,6 +515,17 @@
           },
           rightPriceScale: {
             borderColor: '#444',
+          },
+          handleScroll: {
+            mouseWheel: true,
+            pressedMouseMove: true,
+            horzTouchDrag: true,
+            vertTouchDrag: true,
+          },
+          handleScale: {
+            axisPressedMouseMove: true,
+            mouseWheel: true,
+            pinch: true,
           },
         });
 
@@ -511,11 +550,255 @@
           },
         });
 
-        console.log("Gráfico inicializado correctamente con Lightweight Charts v3.8.0");
+        setupChartInteractions();
+
+        console.log("Gráfico inicializado correctamente con Lightweight Charts v4.1.0");
         showDebug("Gráfico inicializado correctamente.");
       } catch (err) {
         showError(`Error al inicializar el gráfico: ${err.message}`);
         console.error("Detalles del error:", err);
+      }
+    }
+
+    function getVisiblePriceRange() {
+      if (!candlesData || candlesData.length === 0) {
+        console.warn("No hay datos de velas disponibles para calcular el rango de precios.");
+        return { minPrice: 0, maxPrice: 0 };
+      }
+
+      const visibleRange = chart.timeScale().getVisibleRange();
+      if (!visibleRange) {
+        console.warn("No se pudo obtener el rango visible del timeScale.");
+        return { minPrice: 0, maxPrice: 0 };
+      }
+
+      const visibleCandles = candlesData.filter(candle => 
+        candle.time >= visibleRange.from && candle.time <= visibleRange.to
+      );
+
+      if (visibleCandles.length === 0) {
+        console.warn("No hay velas visibles en el rango actual.");
+        return { minPrice: 0, maxPrice: 0 };
+      }
+
+      const minPrice = Math.min(...visibleCandles.map(candle => candle.low));
+      const maxPrice = Math.max(...visibleCandles.map(candle => candle.high));
+
+      console.log("Rango de precios visible calculado:", { minPrice, maxPrice });
+      return { minPrice, maxPrice };
+    }
+
+    function setupChartInteractions() {
+      if (!chart || !candlestickSeries) {
+        console.warn("Chart o candlestickSeries no están inicializados. No se pueden configurar interacciones.");
+        return;
+      }
+
+      chart.subscribeCrosshairMove((param) => {
+        try {
+          if (!param || !param.point) {
+            console.log("CrosshairMove: Parámetro inválido o sin point:", param);
+            return;
+          }
+
+          const y = param.point.y;
+          console.log("Crosshair Y coordinate:", y);
+
+          const chartContainer = document.getElementById("chart-container");
+          const containerHeight = chartContainer.offsetHeight;
+          if (containerHeight <= 0) {
+            console.warn("Altura del contenedor del gráfico inválida:", containerHeight);
+            return;
+          }
+
+          const scaleMargins = { top: 0.1, bottom: 0.1 };
+          const effectiveHeight = containerHeight * (1 - scaleMargins.top - scaleMargins.bottom);
+          const heightOffset = containerHeight * scaleMargins.top;
+
+          const adjustedY = y - heightOffset;
+          if (adjustedY < 0 || adjustedY > effectiveHeight) {
+            console.log("Coordenada Y fuera del área efectiva del priceScale:", adjustedY);
+            return;
+          }
+
+          const { minPrice, maxPrice } = getVisiblePriceRange();
+          const priceRangeLength = maxPrice - minPrice;
+          if (priceRangeLength <= 0) {
+            console.warn("Rango de precios inválido:", priceRangeLength);
+            return;
+          }
+
+          const pricePerPixel = priceRangeLength / effectiveHeight;
+          const price = maxPrice - (adjustedY * pricePerPixel);
+          console.log("Calculated price from Y coordinate:", price, "MinPrice:", minPrice, "MaxPrice:", maxPrice);
+
+          if (isNaN(price)) {
+            console.warn("Precio calculado inválido:", price);
+            return;
+          }
+
+          let closestPrice = null;
+          let closestDistance = Infinity;
+          let closestLine = null;
+
+          selectedPrices.forEach((lineData, selectedPrice) => {
+            const distance = Math.abs(selectedPrice - price);
+            if (distance < closestDistance) {
+              closestDistance = distance;
+              closestPrice = selectedPrice;
+              closestLine = lineData;
+            }
+          });
+
+          const threshold = priceRangeLength * 0.03;
+          console.log("Threshold for showing 'X':", threshold, "Closest distance:", closestDistance);
+
+          if (closestDistance < threshold) {
+            lastHoveredPrice = closestPrice;
+            if (closestLine && !closestLine.marker) {
+              closestLine.marker = closestLine.series.createPriceLine({
+                price: closestPrice,
+                color: closest tareas.isAsk ? '#ff0000' : '#00ff00',
+                lineWidth: 1,
+                lineStyle: LightweightCharts.LineStyle.Dashed,
+                title: '✖ Close',
+              });
+              console.log("Showing 'X' marker for price:", closestPrice);
+            }
+
+            if (markerTimeout) {
+              clearTimeout(markerTimeout);
+              markerTimeout = null;
+            }
+
+            markerTimeout = setTimeout(() => {
+              if (lastHoveredPrice === closestPrice) {
+                if (closestLine.marker) {
+                  closestLine.series.removePriceLine(closestLine.marker);
+                  closestLine.marker = null;
+                  lastHoveredPrice = null;
+                  console.log("Hiding 'X' marker after timeout for price:", closestPrice);
+                }
+              }
+            }, 2000);
+          } else {
+            if (!markerTimeout) {
+              markerTimeout = setTimeout(() => {
+                selectedPrices.forEach((lineData, priceKey) => {
+                  if (lineData.marker && priceKey === lastHoveredPrice) {
+                    lineData.series.removePriceLine(lineData.marker);
+                    lineData.marker = null;
+                    lastHoveredPrice = null;
+                    console.log("Hiding 'X' marker after leaving threshold for price:", priceKey);
+                  }
+                });
+              }, 2000);
+            }
+          }
+        } catch (err) {
+          console.error("Error en subscribeCrosshairMove:", err);
+          showError(`Error en interacción del gráfico: ${err.message}`);
+        }
+      });
+
+      chart.subscribeClick((param) => {
+        try {
+          if (!param || !param.point) {
+            console.log("Click: Parámetro inválido o sin point:", param);
+            return;
+          }
+
+          const y = param.point.y;
+          console.log("Click Y coordinate:", y);
+
+          const chartContainer = document.getElementById("chart-container");
+          const containerHeight = chartContainer.offsetHeight;
+          if (containerHeight <= 0) {
+            console.warn("Altura del contenedor del gráfico inválida al hacer clic:", containerHeight);
+            return;
+          }
+
+          const scaleMargins = { top: 0.1, bottom: 0.1 };
+          const effectiveHeight = containerHeight * (1 - scaleMargins.top - scaleMargins.bottom);
+          const heightOffset = containerHeight * scaleMargins.top;
+
+          const adjustedY = y - heightOffset;
+          if (adjustedY < 0 || adjustedY > effectiveHeight) {
+            console.log("Coordenada Y fuera del área efectiva al hacer clic:", adjustedY);
+            return;
+          }
+
+          const { minPrice, maxPrice } = getVisiblePriceRange();
+          const priceRangeLength = maxPrice - minPrice;
+          if (priceRangeLength <= 0) {
+            console.warn("Rango de precios inválido al hacer clic:", priceRangeLength);
+            return;
+          }
+
+          const pricePerPixel = priceRangeLength / effectiveHeight;
+          const price = maxPrice - (adjustedY * pricePerPixel);
+          console.log("Calculated price from click:", price);
+
+          if (isNaN(price)) {
+            console.warn("Precio calculado inválido al hacer clic:", price);
+            return;
+          }
+
+          let closestPrice = null;
+          let closestDistance = Infinity;
+
+          if (lastHoveredPrice !== null && selectedPrices.has(lastHoveredPrice)) {
+            closestPrice = lastHoveredPrice;
+            closestDistance = 0;
+            console.log("Using last hovered price for click:", closestPrice);
+          } else {
+            selectedPrices.forEach((selectedPrice) => {
+              const distance = Math.abs(selectedPrice - price);
+              if (distance < closestDistance) {
+                closestDistance = distance;
+                closestPrice = selectedPrice;
+              }
+            });
+          }
+
+          const threshold = priceRangeLength * 0.03;
+          console.log("Threshold for click:", threshold, "Closest distance:", closestDistance);
+
+          if (closestDistance < threshold && closestPrice !== null) {
+            console.log("Removing selected price on click:", closestPrice);
+            drawSelectedPriceLine(closestPrice, null, false);
+            updateTableRowsAfterDeselect(closestPrice);
+            lastHoveredPrice = null;
+            if (markerTimeout) {
+              clearTimeout(markerTimeout);
+              markerTimeout = null;
+            }
+          } else {
+            console.log("Click fuera del umbral, no se elimina ninguna línea.");
+          }
+        } catch (err) {
+          console.error("Error en subscribeClick:", err);
+          showError(`Error al hacer clic en el gráfico: ${err.message}`);
+        }
+      });
+    }
+
+    function updateTableRowsAfterDeselect(price) {
+      try {
+        const tableBodies = ['asks-body', 'bids-body'];
+        tableBodies.forEach(tableId => {
+          const tableBody = document.getElementById(tableId);
+          Array.from(tableBody.children).forEach(row => {
+            const rowPrice = parseFloat(row.cells[2].textContent);
+            if (rowPrice === price) {
+              row.classList.remove("selected-row");
+              updateSelectButton(row, price);
+            }
+          });
+        });
+      } catch (err) {
+        console.error("Error en updateTableRowsAfterDeselect:", err);
+        showError(`Error al deseleccionar precio en tabla: ${err.message}`);
       }
     }
 
@@ -555,8 +838,97 @@
 
     let klineSocket = null;
     let isChangingTimeframe = false;
+    let lastCandleTime = null;
 
-    function changeTimeframe() {
+    function setupKlineSocket() {
+      console.log("Configurando Kline WebSocket...");
+      try {
+        klineSocket = new WebSocket(klineWsUrl);
+        klineSocket.onopen = () => {
+          console.log("Kline WebSocket conectado:", klineWsUrl);
+          showDebug("Kline WebSocket conectado.");
+          klineSocketConnected = true;
+          klineReconnectAttempts = 0;
+          updateWebSocketStatus();
+        };
+        klineSocket.onerror = (error) => {
+          const errorMsg = error.message || "Error desconocido";
+          showError(`Error en la conexión de Kline WebSocket: ${errorMsg}.`);
+          console.error("Error de Kline WebSocket:", error);
+          klineSocketConnected = false;
+          updateWebSocketStatus();
+        };
+        klineSocket.onclose = () => {
+          klineSocketConnected = false;
+          updateWebSocketStatus();
+          if (!isChangingTimeframe) {
+            klineReconnectAttempts++;
+            showError(`Kline WebSocket cerrado. Intento de reconexión ${klineReconnectAttempts}...`);
+            console.log(`Kline WebSocket cerrado. Intentando reconectar (intento ${klineReconnectAttempts})...`);
+            setTimeout(() => {
+              setupKlineSocket();
+            }, RECONNECT_DELAY_MS);
+          } else {
+            console.log("Kline WebSocket cerrado durante cambio de temporalidad, no se intentará reconectar automáticamente.");
+          }
+        };
+        klineSocket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            console.log("Mensaje recibido de Kline WebSocket:", data);
+
+            const kline = data.k;
+            if (!kline) {
+              console.warn("Kline data no contiene 'k'. Datos recibidos:", data);
+              return;
+            }
+
+            if (!kline.t || !kline.o || !kline.h || !kline.l || !kline.c) {
+              console.warn("Datos de Kline incompletos:", kline);
+              return;
+            }
+
+            const time = Math.floor(kline.t / 1000);
+            const open = parseFloat(kline.o);
+            const high = parseFloat(kline.h);
+            const low = parseFloat(kline.l);
+            const close = parseFloat(kline.c);
+
+            if (isNaN(time) || isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close)) {
+              console.warn("Datos de Kline inválidos:", { time, open, high, low, close });
+              return;
+            }
+
+            const candleData = { time, open, high, low, close };
+
+            if (!candlestickSeries) {
+              console.warn("candlestickSeries no está inicializada. Omitiendo actualización de velas.");
+              return;
+            }
+
+            if (lastCandleTime && lastCandleTime === time) {
+              candlestickSeries.update(candleData);
+              candlesData[candlesData.length - 1] = candleData;
+              console.log("Vela actualizada:", candleData);
+            } else {
+              candlesData.push(candleData);
+              candlestickSeries.setData(candlesData);
+              chart.timeScale().fitContent();
+              console.log("Nueva vela añadida:", candleData);
+              lastCandleTime = time;
+            }
+          } catch (err) {
+            showError(`Error al parsear mensaje de Kline WebSocket: ${err.message}`);
+            console.error("Error detalles:", err);
+          }
+        };
+      } catch (err) {
+        console.error("Error al configurar Kline WebSocket:", err);
+        showError(`Error al configurar Kline WebSocket: ${err.message}`);
+      }
+    }
+
+    window.changeTimeframe = function() {
       if (isChangingTimeframe) {
         console.log("Cambio de temporalidad en curso, esperando...");
         return;
@@ -564,520 +936,624 @@
       isChangingTimeframe = true;
       console.log("Cambiando temporalidad...");
 
-      currentTimeframe = document.getElementById("timeframe-selector").value;
-      klineWsUrl = `wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_${currentTimeframe}`;
-      klineRestUrl = `https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}&interval=${currentTimeframe}&limit=100`;
-      console.log("Nueva temporalidad:", currentTimeframe);
-      console.log("Nueva URL de Kline:", klineWsUrl);
+      try {
+        currentTimeframe = document.getElementById("timeframe-selector").value;
+        klineWsUrl = `wss://stream.binance.com:443/ws/${symbol.toLowerCase()}@kline_${currentTimeframe}`;
+        klineRestUrl = `https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}&interval=${currentTimeframe}&limit=100`;
+        console.log("Nueva temporalidad:", currentTimeframe);
+        console.log("Nueva URL de Kline:", klineWsUrl);
 
-      if (klineSocket) {
-        console.log("Cerrando WebSocket anterior...");
-        klineSocket.onclose = null;
-        klineSocket.close();
-        klineSocket = null;
-      }
+        if (klineSocket) {
+          console.log("Cerrando WebSocket anterior...");
+          klineSocket.onclose = null;
+          klineSocket.close();
+          klineSocket = null;
+          klineSocketConnected = false;
+          updateWebSocketStatus();
+        }
 
-      setTimeout(() => {
-        setupKlineSocket();
-        loadHistoricalKlines();
+        setTimeout(() => {
+          klineReconnectAttempts = 0;
+          setupKlineSocket();
+          loadHistoricalKlines();
+          isChangingTimeframe = false;
+          console.log("Cambio de temporalidad completado.");
+        }, 1000);
+      } catch (err) {
+        console.error("Error al cambiar temporalidad:", err);
+        showError(`Error al cambiar temporalidad: ${err.message}`);
         isChangingTimeframe = false;
-        console.log("Cambio de temporalidad completado.");
-      }, 1000);
-    }
+      }
+    };
 
-    function autoScaleChart() {
+    window.autoScaleChart = function() {
       console.log("Autoescalando gráfico...");
-      if (chart) {
-        chart.timeScale().fitContent();
-        chart.priceScale().applyOptions({
-          autoScale: true,
-        });
-        console.log("Gráfico autoescalado.");
-      } else {
-        console.warn("Chart no inicializado. No se puede autoescalar.");
+      try {
+        if (chart) {
+          chart.timeScale().fitContent();
+          chart.priceScale().applyOptions({
+            autoScale: true,
+          });
+          console.log("Gráfico autoescalado.");
+        } else {
+          console.warn("Chart no inicializado. No se puede autoescalar.");
+        }
+      } catch (err) {
+        console.error("Error al autoescalar gráfico:", err);
+        showError(`Error al autoescalar gráfico: ${err.message}`);
+      }
+    };
+
+    window.exportLines = function() {
+      console.log("Exportando líneas...");
+      try {
+        const linesData = Array.from(selectedPrices.entries()).map(([price, line]) => ({
+          price: price,
+          color: line.isAsk ? '#ff0000' : '#00ff00',
+          isAsk: line.isAsk,
+        }));
+        const blob = new Blob([JSON.stringify(linesData)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'selected_lines.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        console.log("Líneas exportadas:", linesData);
+        showDebug("Líneas exportadas. Importación no soportada en este entorno.");
+      } catch (err) {
+        console.error("Error al exportar líneas:", err);
+        showError(`Error al exportar líneas: ${err.message}`);
+      }
+    };
+
+    function initializeApp() {
+      console.log("Inicializando aplicación...");
+      showDebug("Inicializando gráfico y cargando historial...");
+      try {
+        initializeChart();
+        if (chart && candlestickSeries) {
+          loadHistoricalKlines();
+          setupKlineSocket();
+          loadSelectedPrices();
+        } else {
+          console.warn("Chart o candlestickSeries no están inicializados al intentar cargar el historial.");
+          showDebug("Error: Chart o candlestickSeries no inicializados al cargar historial.");
+        }
+      } catch (err) {
+        console.error("Error al inicializar la aplicación:", err);
+        showError(`Error al inicializar la aplicación: ${err.message}`);
       }
     }
 
-    function exportLines() {
-      console.log("Exportando líneas...");
-      const linesData = Array.from(selectedPrices.entries()).map(([price, line]) => ({
-        price: price,
-        color: line.series.options().color,
-      }));
-      const blob = new Blob([JSON.stringify(linesData)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'selected_lines.json';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      console.log("Líneas exportadas:", linesData);
-      showDebug("Líneas exportadas. Importación no soportada en este entorno.");
+    function waitForLightweightCharts() {
+      try {
+        if (typeof LightweightCharts !== 'undefined') {
+          console.log("LightweightCharts está listo. Inicializando aplicación...");
+          initializeApp();
+        } else {
+          console.log("Esperando a que LightweightCharts se cargue...");
+          setTimeout(waitForLightweightCharts, 100);
+        }
+      } catch (err) {
+        console.error("Error en waitForLightweightCharts:", err);
+        showError(`Error al esperar LightweightCharts: ${err.message}`);
+      }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
       console.log("Evento 'DOMContentLoaded' disparado.");
-      showDebug("Inicializando gráfico y cargando historial...");
-      initializeChart();
-      if (candlestickSeries) {
-        loadHistoricalKlines();
-        loadSelectedPrices();
-      } else {
-        console.warn("candlestickSeries no está inicializada al intentar cargar el historial.");
-        showDebug("Error: candlestickSeries no inicializada al cargar historial.");
-      }
+      waitForLightweightCharts();
     });
 
-    let lastCandleTime = null;
-
-    function setupKlineSocket() {
-      console.log("Configurando Kline WebSocket...");
-      klineSocket = new WebSocket(klineWsUrl);
-      klineSocket.onopen = () => {
-        console.log("Kline WebSocket conectado:", klineWsUrl);
-        showDebug("Kline WebSocket conectado.");
-      };
-      klineSocket.onerror = (error) => {
-        showError("Error en la conexión de Kline WebSocket. Revisa la red o el estado de la API de Binance.");
-        console.error("Error de Kline WebSocket:", error);
-      };
-      klineSocket.onclose = () => {
-        if (!isChangingTimeframe) {
-          showError("Kline WebSocket cerrado. Intentando reconectar...");
-          console.log("Kline WebSocket cerrado. Reconectando...");
-          setTimeout(() => {
-            setupKlineSocket();
-          }, 5000);
-        } else {
-          console.log("Kline WebSocket cerrado durante cambio de temporalidad, no se intentará reconectar automáticamente.");
-        }
-      };
-      klineSocket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log("Mensaje recibido de Kline WebSocket:", data);
-
-          const kline = data.k;
-          if (!kline) {
-            console.warn("Kline data no contiene 'k'. Datos recibidos:", data);
-            return;
-          }
-
-          const time = Math.floor(kline.t / 1000);
-          const open = parseFloat(kline.o);
-          const high = parseFloat(kline.h);
-          const low = parseFloat(kline.l);
-          const close = parseFloat(kline.c);
-
-          if (isNaN(time) || isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close)) {
-            console.warn("Datos de Kline inválidos:", { time, high, low, close });
-            return;
-          }
-
-          const candleData = { time, open, high, low, close };
-
-          if (!candlestickSeries) {
-            console.warn("candlestickSeries no está inicializada. Omitiendo actualización de velas.");
-            return;
-          }
-
-          if (lastCandleTime && lastCandleTime === time) {
-            candlestickSeries.update(candleData);
-            candlesData[candlesData.length - 1] = candleData;
-            console.log("Vela actualizada:", candleData);
-          } else {
-            candlesData.push(candleData);
-            candlestickSeries.setData(candlesData);
-            chart.timeScale().fitContent();
-            console.log("Nueva vela añadida:", candleData);
-            lastCandleTime = time;
-          }
-        } catch (err) {
-          showError(`Error al parsear mensaje de Kline WebSocket: ${err.message}`);
-          console.error("Error detalles:", err);
-        }
-      };
-    }
-
-    setupKlineSocket();
-
     function saveSelectedPrices() {
-      const prices = Array.from(selectedPrices.keys());
-      localStorage.setItem('selectedPrices', JSON.stringify(prices));
-      console.log("Precios seleccionados guardados:", prices);
+      try {
+        const prices = Array.from(selectedPrices.entries()).map(([price, line]) => ({
+          price: price,
+          isAsk: line.isAsk,
+        }));
+        localStorage.setItem('selectedPrices', JSON.stringify(prices));
+        console.log("Precios seleccionados guardados:", prices);
+      } catch (err) {
+        console.error("Error al guardar precios seleccionados:", err);
+        showError(`Error al guardar precios seleccionados: ${err.message}`);
+      }
     }
 
     function loadSelectedPrices() {
-      const savedPrices = localStorage.getItem('selectedPrices');
-      if (savedPrices) {
-        const prices = JSON.parse(savedPrices);
-        prices.forEach(price => {
-          const priceNum = parseFloat(price);
-          if (!isNaN(priceNum) && !selectedPrices.has(priceNum)) {
-            drawSelectedPriceLine(priceNum, null);
-          }
-        });
-        console.log("Precios seleccionados cargados:", prices);
-      } else {
-        console.log("No hay precios seleccionados guardados en localStorage.");
+      try {
+        const savedPrices = localStorage.getItem('selectedPrices');
+        if (savedPrices) {
+          const prices = JSON.parse(savedPrices);
+          prices.forEach(item => {
+            const priceNum = parseFloat(item.price);
+            const isAsk = item.isAsk;
+            if (!isNaN(priceNum) && !selectedPrices.has(priceNum)) {
+              drawSelectedPriceLine(priceNum, null, isAsk);
+            }
+          });
+          console.log("Precios seleccionados cargados:", prices);
+        } else {
+          console.log("No hay precios seleccionados guardados en localStorage.");
+        }
+      } catch (err) {
+        console.error("Error al cargar precios seleccionados:", err);
+        showError(`Error al cargar precios seleccionados: ${err.message}`);
       }
     }
 
-    function drawSelectedPriceLine(price, row) {
-      console.log("Intentando dibujar línea para precio:", price);
-      if (!chart || !candlestickSeries) {
-        console.warn("Chart o candlestickSeries no están inicializados. No se puede dibujar la línea de precio.");
-        showDebug("Error: Chart o candlestickSeries no inicializados.");
-        return;
-      }
+    function drawSelectedPriceLine(price, row, isAsk) {
+      console.log("Intentando dibujar línea para precio:", price, "isAsk:", isAsk);
+      try {
+        if (!chart || !candlestickSeries) {
+          console.warn("Chart o candlestickSeries no están inicializados. No se puede dibujar la línea de precio.");
+          showDebug("Error: Chart o candlestickSeries no inicializados al intentar dibujar línea.");
+          return;
+        }
 
-      if (isNaN(price)) {
-        console.error("Precio inválido:", price);
-        showDebug("Error: Precio inválido para dibujar línea.");
-        return;
-      }
+        if (isNaN(price)) {
+          console.error("Precio inválido:", price);
+          showDebug("Error: Precio inválido para dibujar línea.");
+          return;
+        }
 
-      if (selectedPrices.has(price)) {
-        const line = selectedPrices.get(price);
-        chart.removeSeries(line.series);
-        selectedPrices.delete(price);
+        if (selectedPrices.has(price)) {
+          const line = selectedPrices.get(price);
+          if (line.marker) {
+            line.series.removePriceLine(line.marker);
+          }
+          chart.removeSeries(line.series);
+          selectedPrices.delete(price);
+          if (row) {
+            row.classList.remove("selected-row");
+            updateSelectButton(row, price);
+          }
+          console.log("Línea de precio deseleccionada:", price);
+          showDebug(`Línea deseleccionada: ${price}`);
+          saveSelectedPrices();
+          return;
+        }
+
+        const lineColor = isAsk ? '#ff0000' : '#00ff00';
+        const lineSeries = chart.addLineSeries({
+          color: lineColor,
+          lineWidth: 1,
+          priceLineVisible: false,
+          lastValueVisible: false,
+        });
+
+        const now = Math.floor(Date.now() / 1000);
+        lineSeries.setData([
+          { time: now - 86400, value: price },
+          { time: now, value: price },
+        ]);
+
+        lineSeries.createPriceLine({
+          price: price,
+          color: lineColor,
+          lineWidth: 1,
+          lineStyle: LightweightCharts.LineStyle.Solid,
+          title: `Price: ${formatPrice(price)}`,
+        });
+
+        selectedPrices.set(price, { series: lineSeries, price: price, isAsk: isAsk, marker: null });
         if (row) {
-          row.classList.remove("selected-row");
+          row.classList.add("selected-row");
           updateSelectButton(row, price);
         }
-        console.log("Línea de precio deseleccionada:", price);
-        showDebug(`Línea deseleccionada: ${price}`);
+        console.log("Línea de precio seleccionada dibujada:", price, "Color:", lineColor);
+        showDebug(`Línea seleccionada: ${price}`);
         saveSelectedPrices();
-        return;
+      } catch (err) {
+        console.error("Error al dibujar línea de precio:", err);
+        showError(`Error al dibujar línea de precio: ${err.message}`);
       }
-
-      const lineSeries = chart.addLineSeries({
-        color: '#ff9900',
-        lineWidth: 1,
-        priceLineVisible: false,
-        lastValueVisible: false,
-      });
-
-      const now = Math.floor(Date.now() / 1000);
-      lineSeries.setData([
-        { time: now - 86400, value: price },
-        { time: now, value: price },
-      ]);
-
-      lineSeries.createPriceLine({
-        price: price,
-        color: '#ff9900',
-        lineWidth: 1,
-        lineStyle: LightweightCharts.LineStyle.Solid,
-        title: `Selected Price: ${formatPrice(price)}`,
-      });
-
-      selectedPrices.set(price, { series: lineSeries, price: price });
-      if (row) {
-        row.classList.add("selected-row");
-        updateSelectButton(row, price);
-      }
-      console.log("Línea de precio seleccionada dibujada:", price);
-      showDebug(`Línea seleccionada: ${price}`);
-      saveSelectedPrices();
     }
 
     function updateSelectButton(row, price) {
-      const selectCell = row.querySelector('td:last-child');
-      if (selectedPrices.has(price)) {
-        selectCell.innerHTML = `<button class="select-price-btn" data-price="${price}">📍</button>`;
-      } else {
-        selectCell.innerHTML = `<span class="select-circle" data-price="${price}"></span>`;
+      try {
+        const selectCell = row.querySelector('td:last-child');
+        if (selectCell) {
+          if (selectedPrices.has(price)) {
+            selectCell.innerHTML = `<button class="select-price-btn" data-price="${price}">📍</button>`;
+          } else {
+            selectCell.innerHTML = `<span class="select-circle" data-price="${price}"></span>`;
+          }
+        } else {
+          console.error("No se encontró la celda de selección en la fila:", row);
+        }
+      } catch (err) {
+        console.error("Error al actualizar botón de selección:", err);
+        showError(`Error al actualizar botón de selección: ${err.message}`);
       }
     }
 
     function redrawSelectedLines() {
-      console.log("Verificando líneas seleccionadas...");
-      selectedPrices.forEach((value, price) => {
-        if (!value.series || !chart.allSeries().includes(value.series)) {
-          console.log(`Redibujando línea para precio: ${price}`);
-          drawSelectedPriceLine(price, null);
+      console.log("Redibujando todas las líneas seleccionadas...");
+      try {
+        if (!chart) {
+          console.warn("Chart no está inicializado. No se pueden redibujar las líneas.");
+          return;
         }
-      });
-      console.log("Líneas seleccionadas verificadas:", selectedPrices.size);
+        const pricesToRedraw = Array.from(selectedPrices.entries()).map(([price, lineData]) => ({
+          price: price,
+          isAsk: lineData.isAsk,
+        }));
+        selectedPrices.forEach((value, price) => {
+          if (value.series) {
+            if (value.marker) {
+              value.series.removePriceLine(value.marker);
+            }
+            chart.removeSeries(value.series);
+          }
+        });
+        selectedPrices.clear();
+        pricesToRedraw.forEach(item => {
+          console.log(`Redibujando línea para precio: ${item.price}, isAsk: ${item.isAsk}`);
+          drawSelectedPriceLine(item.price, null, item.isAsk);
+        });
+        console.log("Líneas seleccionadas redibujadas:", selectedPrices.size);
+      } catch (err) {
+        console.error("Error al redibujar líneas seleccionadas:", err);
+        showError(`Error al redibujar líneas seleccionadas: ${err.message}`);
+      }
     }
 
     window.addEventListener('resize', () => {
       console.log("Evento de redimensionamiento disparado.");
-      if (chart) {
-        chart.resize(document.getElementById("chart-container").offsetWidth, 400);
-        console.log("Gráfico redimensionado.");
-        redrawSelectedLines(); // Redibujar líneas si el gráfico se redimensiona
-      } else {
-        console.warn("Chart no inicializado durante redimensionamiento.");
+      try {
+        if (chart) {
+          const chartContainer = document.getElementById("chart-container");
+          chart.resize(chartContainer.offsetWidth, 400);
+          console.log("Gráfico redimensionado:", chartContainer.offsetWidth, "x 400");
+          redrawSelectedLines();
+        } else {
+          console.warn("Chart no inicializado durante redimensionamiento.");
+        }
+      } catch (err) {
+        console.error("Error al redimensionar gráfico:", err);
+        showError(`Error al redimensionar gráfico: ${err.message}`);
       }
     });
 
     function setupEventListeners() {
       console.log("Configurando event listeners...");
-      const tableBodies = document.querySelectorAll('#asks-body, #bids-body');
-      console.log("Tablas encontradas:", tableBodies.length);
-      tableBodies.forEach(tableBody => {
-        tableBody.addEventListener('click', (event) => {
-          const selectBtn = event.target.closest('.select-price-btn, .select-circle');
-          if (selectBtn) {
-            console.log("Clic detectado en botón de selección:", selectBtn);
-            event.stopPropagation();
-            const price = parseFloat(selectBtn.dataset.price);
-            const row = selectBtn.closest('tr');
-            console.log("Botón de selección clicado, precio:", price);
-            console.log("Fila asociada:", row);
-            if (row) {
-              drawSelectedPriceLine(price, row);
-            } else {
-              console.error("No se encontró la fila asociada al botón de selección.");
-              showDebug("Error: No se encontró la fila para el precio seleccionado.");
-            }
-            return;
-          }
+      try {
+        const tableBodies = document.querySelectorAll('#asks-body, #bids-body');
+        console.log("Tablas encontradas:", tableBodies.length);
 
-          const priceCell = event.target.closest('.price-cell');
-          if (priceCell) {
-            console.log("Clic en price-cell detectado.");
-            event.stopPropagation();
-            const price = parseFloat(priceCell.textContent);
-            const row = priceCell.closest('tr');
-            console.log("Celda de precio clicada, precio:", price);
-            console.log("Fila asociada:", row);
-            if (row) {
-              drawSelectedPriceLine(price, row);
-            } else {
-              console.error("No se encontró la fila asociada a la celda de precio.");
-              showDebug("Error: No se encontró la fila para el precio seleccionado.");
+        tableBodies.forEach(tableBody => {
+          const isAsk = tableBody.id === 'asks-body';
+          tableBody.addEventListener('click', (event) => {
+            const target = event.target;
+            if (target.classList.contains('select-price-btn') || target.classList.contains('select-circle')) {
+              console.log("Evento click directo en elemento de selección:", target);
+              event.stopPropagation();
+              event.preventDefault();
+              const price = parseFloat(target.dataset.price);
+              const row = target.closest('tr');
+              console.log("Botón de selección clicado, precio:", price, "Fila:", row);
+              if (row) {
+                isInteracting = true;
+                console.log("isInteracting establecido a true por selección.");
+                drawSelectedPriceLine(price, row, isAsk);
+                setTimeout(() => {
+                  isInteracting = false;
+                  console.log("isInteracting reseteado después de interacción.");
+                }, INTERACTION_TIMEOUT_MS);
+              } else {
+                console.error("No se encontró la fila asociada al botón de selección.");
+                showDebug("Error: No se encontró la fila para el precio seleccionado.");
+              }
             }
-            copyPriceCell(event);
-          }
+          });
+
+          tableBody.addEventListener('click', (event) => {
+            const priceCell = event.target.closest('.price-cell');
+            if (priceCell) {
+              console.log("Evento click en celda de precio:", priceCell);
+              event.stopPropagation();
+              event.preventDefault();
+              isInteracting = true;
+              console.log("isInteracting establecido a true por copia de precio.");
+              copyPriceCell(priceCell);
+              setTimeout(() => {
+                isInteracting = false;
+                console.log("isInteracting reseteado después de copiar precio.");
+              }, INTERACTION_TIMEOUT_MS);
+            }
+          });
         });
-      });
+      } catch (err) {
+        console.error("Error al configurar event listeners:", err);
+        showError(`Error al configurar event listeners: ${err.message}`);
+      }
     }
 
-    const tickerSocket = new WebSocket(tickerWsUrl);
-    tickerSocket.onopen = () => {
-      console.log("Ticker WebSocket conectado:", tickerWsUrl);
-      showDebug("Ticker WebSocket conectado.");
-    };
-    tickerSocket.onerror = (error) => {
-      showError("Error en la conexión de Ticker WebSocket. Revisa la red o el estado de la API de Binance.");
-      console.error("Error de Ticker WebSocket:", error);
-    };
-    tickerSocket.onclose = () => {
-      showError("Ticker WebSocket cerrado. Intentando reconectar...");
-      console.log("Ticker WebSocket cerrado. Reconectando...");
-      setTimeout(() => {
-        const newSocket = new WebSocket(tickerWsUrl);
-        newSocket.onopen = tickerSocket.onopen;
-        newSocket.onerror = tickerSocket.onerror;
-        newSocket.onclose = tickerSocket.onclose;
-        newSocket.onmessage = tickerSocket.onmessage;
-      }, 5000);
-    };
-    tickerSocket.onmessage = (event) => {
-      const startTime = performance.now();
+    function setupTickerSocket() {
       try {
-        const data = JSON.parse(event.data);
-        console.log("Mensaje recibido de Ticker WebSocket:", data);
-        const symbolData = data.find(item => item.s === symbol.toUpperCase());
-        if (symbolData) {
-          const newPrice = parseFloat(symbolData.c);
-          console.log(`Ticker update: currentPrice=${currentPrice}, newPrice=${newPrice}`);
-          currentPrice = newPrice;
-          document.getElementById("symbol-title").innerText = `${symbol}: ${formatPrice(currentPrice)} USDT`;
+        const tickerSocket = new WebSocket(tickerWsUrl);
+        tickerSocket.onopen = () => {
+          console.log("Ticker WebSocket conectado:", tickerWsUrl);
+          showDebug("Ticker WebSocket conectado.");
+          tickerSocketConnected = true;
+          updateWebSocketStatus();
+        };
+        tickerSocket.onerror = (error) => {
+          const errorMsg = error.message || "Error desconocido";
+          showError(`Error en la conexión de Ticker WebSocket: ${errorMsg}.`);
+          console.error("Error de Ticker WebSocket:", error);
+          tickerSocketConnected = false;
+          updateWebSocketStatus();
+        };
+        tickerSocket.onclose = () => {
+          tickerSocketConnected = false;
+          updateWebSocketStatus();
+          showError("Ticker WebSocket cerrado. Intentando reconectar...");
+          console.log("Ticker WebSocket cerrado. Reconectando...");
+          setTimeout(() => {
+            setupTickerSocket();
+          }, RECONNECT_DELAY_MS);
+        };
+        tickerSocket.onmessage = (event) => {
+          const startTime = performance.now();
+          try {
+            const data = JSON.parse(event.data);
+            console.log("Mensaje recibido de Ticker WebSocket:", data);
+            const symbolData = data.find(item => item.s === symbol.toUpperCase());
+            if (symbolData) {
+              const newPrice = parseFloat(symbolData.c);
+              console.log(`Ticker update: currentPrice=${currentPrice}, newPrice=${newPrice}`);
+              currentPrice = newPrice;
+              document.getElementById("symbol-title").innerText = `${symbol}: ${formatPrice(currentPrice)} USDT`;
 
-          const endTime = performance.now();
-          const timeSinceLastUpdate = startTime - lastPriceUpdateTime;
-          lastPriceUpdateTime = startTime;
-          console.log(`Tiempo de actualización del precio: ${(endTime - startTime).toFixed(2)}ms`);
-          console.log(`Tiempo desde la última actualización del precio: ${timeSinceLastUpdate.toFixed(2)}ms`);
+              const endTime = performance.now();
+              const timeSinceLastUpdate = startTime - lastPriceUpdateTime;
+              lastPriceUpdateTime = startTime;
+              console.log(`Tiempo de actualización del precio: ${(endTime - startTime).toFixed(2)}ms`);
+              console.log(`Tiempo desde la última actualización del precio: ${timeSinceLastUpdate.toFixed(2)}ms`);
 
-          updateTimestamp();
-          scheduleTableUpdate();
-        }
+              updateTimestamp();
+              scheduleTableUpdate();
+            }
+          } catch (err) {
+            showError(`Error al parsear mensaje de Ticker WebSocket: ${err.message}`);
+            console.error("Error detalles:", err);
+          }
+        };
+        return tickerSocket;
       } catch (err) {
-        showError(`Error al parsear mensaje de Ticker WebSocket: ${err.message}`);
-        console.error("Error detalles:", err);
+        console.error("Error al configurar Ticker WebSocket:", err);
+        showError(`Error al configurar Ticker WebSocket: ${err.message}`);
       }
-    };
+    }
 
-    const depthSocket = new WebSocket(depthWsUrl);
-    depthSocket.onopen = () => {
-      console.log("Depth WebSocket conectado:", depthWsUrl);
-      showDebug("Depth WebSocket conectado.");
-    };
-    depthSocket.onerror = (error) => {
-      showError("Error en la conexión de Depth WebSocket. Revisa la red, el símbolo o el estado de la API de Binance.");
-      console.error("Error de Depth WebSocket:", error);
-    };
-    depthSocket.onclose = () => {
-      showError("Depth WebSocket cerrado. Intentando reconectar...");
-      console.log("Depth WebSocket cerrado. Reconectando...");
-      setTimeout(() => {
-        const newSocket = new WebSocket(depthWsUrl);
-        newSocket.onopen = depthSocket.onopen;
-        newSocket.onerror = depthSocket.onerror;
-        newSocket.onclose = depthSocket.onclose;
-        newSocket.onmessage = depthSocket.onmessage;
-      }, 5000);
-    };
-    depthSocket.onmessage = (event) => {
-      const startTime = performance.now();
+    function setupDepthSocket() {
       try {
-        const data = JSON.parse(event.data);
-        const now = Date.now();
-        console.log("Mensaje recibido de Depth WebSocket:", JSON.stringify(data));
+        const depthSocket = new WebSocket(depthWsUrl);
+        depthSocket.onopen = () => {
+          console.log("Depth WebSocket conectado:", depthWsUrl);
+          showDebug("Depth WebSocket conectado.");
+          depthSocketConnected = true;
+          updateWebSocketStatus();
+        };
+        depthSocket.onerror = (error) => {
+          const errorMsg = error.message || "Error desconocido";
+          showError(`Error en la conexión de Depth WebSocket: ${errorMsg}.`);
+          console.error("Error de Depth WebSocket:", error);
+          depthSocketConnected = false;
+          updateWebSocketStatus();
+        };
+        depthSocket.onclose = () => {
+          depthSocketConnected = false;
+          updateWebSocketStatus();
+          showError("Depth WebSocket cerrado. Intentando reconectar...");
+          console.log("Depth WebSocket cerrado. Reconectando...");
+          setTimeout(() => {
+            setupDepthSocket();
+          }, RECONNECT_DELAY_MS);
+        };
+        depthSocket.onmessage = (event) => {
+          const startTime = performance.now();
+          try {
+            const data = JSON.parse(event.data);
+            const now = Date.now();
+            console.log("Mensaje recibido de Depth WebSocket:", JSON.stringify(data));
 
-        if (data.a) {
-          console.log(`Procesando ${data.a.length} actualizaciones de asks:`, data.a);
-          asksData = updateOrders(asksData, data.a, now, true);
-          asksProcessed += data.a.length;
-        }
-        if (data.b) {
-          console.log(`Procesando ${data.b.length} actualizaciones de bids:`, data.b);
-          bidsData = updateOrders(bidsData, data.b, now, false);
-          bidsProcessed += data.b.length;
-        }
+            if (data.a) {
+              console.log(`Procesando ${data.a.length} actualizaciones de asks:`, data.a);
+              asksData = updateOrders(asksData, data.a, now, true);
+              asksProcessed += data.a.length;
+            }
+            if (data.b) {
+              console.log(`Procesando ${data.b.length} actualizaciones de bids:`, data.b);
+              bidsData = updateOrders(bidsData, data.b, now, false);
+              bidsProcessed += data.b.length;
+            }
 
-        diffOrderbookProcessed = Math.abs(asksProcessed - bidsProcessed);
+            diffOrderbookProcessed = Math.abs(asksProcessed - bidsProcessed);
 
-        if (currentPrice > 0) {
-          asksData = asksData.filter(item => {
-            const diff = Math.abs((item.price - currentPrice) / currentPrice) * 100;
-            return diff <= 10;
-          });
-          bidsData = bidsData.filter(item => {
-            const diff = Math.abs((item.price - currentPrice) / currentPrice) * 100;
-            return diff <= 10;
-          });
-        }
+            if (currentPrice > 0) {
+              asksData = asksData.filter(item => {
+                const diff = Math.abs((item.price - currentPrice) / currentPrice) * 100;
+                return diff <= 10;
+              });
+              bidsData = bidsData.filter(item => {
+                const diff = Math.abs((item.price - currentPrice) / currentPrice) * 100;
+                return diff <= 10;
+              });
+            }
 
-        asksData.sort((a, b) => b.usdt - a.usdt);
-        bidsData.sort((a, b) => b.usdt - a.usdt);
+            asksData.sort((a, b) => b.usdt - a.usdt);
+            bidsData.sort((a, b) => b.usdt - a.usdt);
 
-        asksData = asksData.slice(0, 30);
-        bidsData = bidsData.slice(0, 30);
+            asksData = asksData.slice(0, 30);
+            bidsData = bidsData.slice(0, 30);
 
-        document.getElementById("diff-orderbook").innerText = diffOrderbookProcessed.toLocaleString();
-        document.getElementById("asks-total").innerText = `ASKS - ${asksData.length} | TOTAL: ${asksProcessed.toLocaleString()}`;
-        document.getElementById("bids-total").innerText = `BIDS - ${bidsData.length} | TOTAL: ${bidsProcessed.toLocaleString()}`;
-        const totalPrices = asksProcessed + bidsProcessed;
-        document.getElementById("total-prices").innerText = totalPrices.toLocaleString();
+            document.getElementById("diff-orderbook").innerText = diffOrderbookProcessed.toLocaleString();
+            document.getElementById("asks-total").innerText = `ASKS - ${asksData.length} | TOTAL: ${asksProcessed.toLocaleString()}`;
+            document.getElementById("bids-total").innerText = `BIDS - ${bidsData.length} | TOTAL: ${bidsProcessed.toLocaleString()}`;
+            const totalPrices = asksProcessed + bidsProcessed;
+            document.getElementById("total-prices").innerText = totalPrices.toLocaleString();
 
-        if (totalPrices > 250000) {
-          document.getElementById("total-prices").classList.add("highlight-total");
-        }
+            if (totalPrices > 250000) {
+              document.getElementById("total-prices").classList.add("highlight-total");
+            }
 
-        const asksIndicatorStart = document.getElementById("asks-indicator-start");
-        const asksIndicatorEnd = document.getElementById("asks-indicator-end");
-        const bidsIndicatorStart = document.getElementById("bids-indicator-start");
-        const bidsIndicatorEnd = document.getElementById("bids-indicator-end");
-        asksIndicatorStart.classList.remove("circle-red", "circle-green");
-        asksIndicatorEnd.classList.remove("circle-red", "circle-green");
-        bidsIndicatorStart.classList.remove("circle-red", "circle-green");
-        bidsIndicatorEnd.classList.remove("circle-red", "circle-green");
-        if (asksProcessed > bidsProcessed) {
-          asksIndicatorStart.classList.add("circle-red");
-          asksIndicatorEnd.classList.add("circle-red");
-          console.log(`Asks processed (${asksProcessed}) > Bids processed (${bidsProcessed}): Showing red circles for Top Asks`);
-        } else if (bidsProcessed > asksProcessed) {
-          bidsIndicatorStart.classList.add("circle-green");
-          bidsIndicatorEnd.classList.add("circle-green");
-          console.log(`Bids processed (${bidsProcessed}) > Asks processed (${asksProcessed}): Showing green circles for Top Bids`);
-        }
+            const asksIndicatorStart = document.getElementById("asks-indicator-start");
+            const asksIndicatorEnd = document.getElementById("asks-indicator-end");
+            const bidsIndicatorStart = document.getElementById("bids-indicator-start");
+            const bidsIndicatorEnd = document.getElementById("bids-indicator-end");
+            asksIndicatorStart.classList.remove("circle-red", "circle-green");
+            asksIndicatorEnd.classList.remove("circle-red", "circle-green");
+            bidsIndicatorStart.classList.remove("circle-red", "circle-green");
+            bidsIndicatorEnd.classList.remove("circle-red", "circle-green");
+            if (asksProcessed > bidsProcessed) {
+              asksIndicatorStart.classList.add("circle-red");
+              asksIndicatorEnd.classList.add("circle-red");
+              console.log(`Asks processed (${asksProcessed}) > Bids processed (${bidsProcessed}): Showing red circles for Top Asks`);
+            } else if (bidsProcessed > asksProcessed) {
+              bidsIndicatorStart.classList.add("circle-green");
+              bidsIndicatorEnd.classList.add("circle-green");
+              console.log(`Bids processed (${bidsProcessed}) > Asks processed (${asksProcessed}): Showing green circles for Top Bids`);
+            }
 
-        scheduleTableUpdate();
+            scheduleTableUpdate();
+          } catch (err) {
+            showError(`Error al procesar mensaje de Depth WebSocket: ${err.message}`);
+            console.error("Error detalles:", err);
+          }
+        };
+        return depthSocket;
       } catch (err) {
-        showError(`Error al procesar mensaje de Depth WebSocket: ${err.message}`);
-        console.error("Error detalles:", err);
+        console.error("Error al configurar Depth WebSocket:", err);
+        showError(`Error al configurar Depth WebSocket: ${err.message}`);
       }
-    };
+    }
+
+    setupTickerSocket();
+    setupDepthSocket();
+    setupEventListeners();
 
     function scheduleTableUpdate() {
-      if (!pendingUpdate && !isInteracting) {
+      if (!pendingUpdate) {
         pendingUpdate = true;
+        const now = Date.now();
+        if (isInteracting) {
+          console.log('Actualización de tabla retrasada: usuario interactuando.');
+          setTimeout(() => {
+            pendingUpdate = false;
+            scheduleTableUpdate();
+          }, TABLE_UPDATE_DEBOUNCE_MS);
+          return;
+        }
+        if (now - lastTableUpdate < TABLE_UPDATE_DEBOUNCE_MS) {
+          console.log('Actualización de tabla retrasada para evitar regeneración rápida.');
+          setTimeout(() => {
+            pendingUpdate = false;
+            scheduleTableUpdate();
+          }, TABLE_UPDATE_DEBOUNCE_MS - (now - lastTableUpdate));
+          return;
+        }
         requestAnimationFrame(() => {
-          updateTables();
-          pendingUpdate = false;
-          console.log('Tabla actualizada.');
-          showDebug("Tablas actualizadas.");
+          try {
+            updateTables();
+            lastTableUpdate = Date.now();
+            pendingUpdate = false;
+            console.log('Tabla actualizada.');
+            showDebug("Tablas actualizadas.");
+          } catch (err) {
+            console.error("Error al actualizar tablas:", err);
+            showError(`Error al actualizar tablas: ${err.message}`);
+            pendingUpdate = false;
+          }
         });
-      } else if (isInteracting) {
-        console.log('Actualización de tabla omitida: usuario interactuando con celda Price.');
+      } else {
+        console.log("Actualización de tabla ya programada, esperando...");
       }
     }
 
     function updateOrders(existingOrders, newOrders, now, isAsk) {
       console.log("Actualizando órdenes...");
-      const ordersMap = new Map(existingOrders.map(o => [o.price, o]));
+      try {
+        const ordersMap = new Map(existingOrders.map(o => [o.price, o]));
 
-      newOrders.forEach(([p, q]) => {
-        const price = parseFloat(p);
-        const qty = parseFloat(q);
-        const usdt = price * qty;
+        newOrders.forEach(([p, q]) => {
+          const price = parseFloat(p);
+          const qty = parseFloat(q);
+          const usdt = price * qty;
 
-        console.log(`Procesando actualización: price=${price}, qty=${qty}, usdt=${usdt}`);
+          console.log(`Procesando actualización: price=${price}, qty=${qty}, usdt=${usdt}`);
 
-        if (qty === 0) {
-          ordersMap.delete(price);
-          rowColors.delete(price);
-          console.log(`Price ${price} eliminado`);
-        } else {
-          if (ordersMap.has(price)) {
-            const existing = ordersMap.get(price);
-            const previousHits = existing.hits || 0;
-
-            existing.qty = qty;
-            existing.usdt = usdt;
-            existing.lastUpdated = now;
-            existing.hits = previousHits + 1;
-            existing.colorAssignedTime = now;
-
-            console.log(`Price ${price} actualizado: hits=${existing.hits}, qty=${qty}, usdt=${usdt}, lastUpdated=${existing.lastUpdated}`);
+          if (qty === 0) {
+            ordersMap.delete(price);
+            rowColors.delete(price);
+            console.log(`Price ${price} eliminado`);
           } else {
-            ordersMap.set(price, {
-              price,
-              qty,
-              usdt,
-              lastUpdated: now,
-              colorAssignedTime: now,
-              hits: 1,
-            });
-            console.log(`Nuevo precio ${price} añadido: hits=1, qty=${qty}, usdt=${usdt}, lastUpdated=${now}`);
-          }
-        }
-      });
+            if (ordersMap.has(price)) {
+              const existing = ordersMap.get(price);
+              const previousHits = existing.hits || 0;
 
-      return Array.from(ordersMap.values());
+              existing.qty = qty;
+              existing.usdt = usdt;
+              existing.lastUpdated = now;
+              existing.hits = previousHits + 1;
+              existing.colorAssignedTime = now;
+
+              console.log(`Price ${price} actualizado: hits=${existing.hits}, qty=${qty}, usdt=${usdt}, lastUpdated=${existing.lastUpdated}`);
+            } else {
+              ordersMap.set(price, {
+                price,
+                qty,
+                usdt,
+                lastUpdated: now,
+                colorAssignedTime: now,
+                hits: 1,
+              });
+              console.log(`Nuevo precio ${price} añadido: hits=1, qty=${qty}, usdt=${usdt}, lastUpdated=${now}`);
+            }
+          }
+        });
+
+        return Array.from(ordersMap.values());
+      } catch (err) {
+        console.error("Error al actualizar órdenes:", err);
+        showError(`Error al actualizar órdenes: ${err.message}`);
+        return existingOrders;
+      }
     }
 
     function getColorClass(price, markPrice, isAsk, colorAssignedTime, now) {
-      const diff = ((price - markPrice) / markPrice) * 100;
-      const absDiff = Math.abs(diff);
-      const colorAge = now - colorAssignedTime;
+      try {
+        const diff = ((price - markPrice) / markPrice) * 100;
+        const absDiff = Math.abs(diff);
+        const colorAge = now - colorAssignedTime;
 
-      if (colorAge > COLOR_DURATION_MS) {
-        console.log(`Price ${price}: color expirado después de ${colorAge}ms, estableciendo color-transparent`);
+        if (colorAge > COLOR_DURATION_MS) {
+          console.log(`Price ${price}: color expirado después de ${colorAge}ms, estableciendo color-transparent`);
+          return "color-transparent";
+        }
+
+        let colorClass;
+        if (absDiff <= 0.1) {
+          colorClass = "color-orange";
+        } else if (absDiff > 0.1 && absDiff <= 0.5) {
+          colorClass = "color-yellow";
+        } else if (absDiff > 0.5 && absDiff <= 1) {
+          colorClass = "color-blue";
+        } else {
+          colorClass = "color-transparent";
+        }
+
+        console.log(`Price ${price}: markPrice=${markPrice}, absDiff=${absDiff.toFixed(3)}%, color=${colorClass}`);
+        return colorClass;
+      } catch (err) {
+        console.error("Error al obtener clase de color:", err);
+        showError(`Error al obtener clase de color: ${err.message}`);
         return "color-transparent";
       }
-
-      let colorClass;
-      if (absDiff <= 0.1) {
-        colorClass = "color-orange";
-      } else if (absDiff > 0.1 && absDiff <= 0.5) {
-        colorClass = "color-yellow";
-      } else if (absDiff > 0.5 && absDiff <= 1) {
-        colorClass = "color-blue";
-      } else {
-        colorClass = "color-transparent";
-      }
-
-      console.log(`Price ${price}: markPrice=${markPrice}, absDiff=${absDiff.toFixed(3)}%, color=${colorClass}`);
-      return colorClass;
     }
 
     function updateTables() {
@@ -1088,241 +1564,216 @@
 
     function updateTable(tableId, data, markPrice, isAsk) {
       console.log(`Actualizando tabla ${tableId}...`);
-      const tableBody = document.getElementById(tableId);
-      const now = Date.now();
-
-      const existingRows = new Map();
-      Array.from(tableBody.children).forEach(row => {
-        const price = parseFloat(row.cells[2].textContent);
-        existingRows.set(price, row);
-      });
-
-      let accUsdt = 0;
-      let accQty = 0;
-
-      const fragment = document.createDocumentFragment();
-      data.forEach((item, idx) => {
-        const ageTime = formatAge(now - item.lastUpdated);
-        console.log(`Calculando edad para precio ${item.price}: now=${now}, lastUpdated=${item.lastUpdated}, age=${ageTime}`);
-        const pct = markPrice ? (((item.price - markPrice) / markPrice) * 100).toFixed(3) : "---";
-        
-        accUsdt += item.usdt;
-        accQty += item.qty;
-
-        let row = existingRows.get(item.price);
-        if (!row) {
-          row = document.createElement("tr");
-          row.className = isAsk ? "ask-row" : "bid-row";
-        }
-
-        if (selectedPrices.has(item.price)) {
-          row.classList.add("selected-row");
-        } else {
-          row.classList.remove("selected-row");
-        }
-
-        if (idx < 4) {
-          row.classList.add("highlight-top");
-        } else {
-          row.classList.remove("highlight-top");
-        }
-
-        const newColorClass = getColorClass(item.price, markPrice, isAsk, item.colorAssignedTime || now, now);
-        row.classList.remove("color-transparent", "color-blue", "color-yellow", "color-orange");
-        row.classList.add(newColorClass);
-        rowColors.set(item.price, newColorClass);
-
-        if (newColorClass !== "color-transparent") {
-          row.classList.add("bold-row");
-        } else {
-          row.classList.remove("bold-row");
-        }
-
-        const recentlyUpdated = item.lastUpdated && (now - item.lastUpdated) <= 1000;
-        if (recentlyUpdated) {
-          console.log(`Aplicando resaltado para precio ${item.price}: isAsk=${isAsk}, recentlyUpdated=${recentlyUpdated}`);
-          const highlightClass = isAsk ? "highlight-red" : "highlight-green";
-          row.classList.remove("highlight-red", "highlight-green");
-          row.classList.add(highlightClass);
-
-          setTimeout(() => {
-            row.classList.remove("highlight-red", "highlight-green");
-            row.classList.remove("color-transparent", "color-blue", "color-yellow", "color-orange");
-            const updatedColorClass = getColorClass(item.price, currentPrice, isAsk, item.colorAssignedTime || now, now);
-            row.classList.add(updatedColorClass);
-            rowColors.set(item.price, updatedColorClass);
-            if (updatedColorClass !== "color-transparent") {
-              row.classList.add("bold-row");
-            } else {
-              row.classList.remove("bold-row");
-            }
-            console.log(`Reaplicado color class para precio ${item.price}: ${updatedColorClass}`);
-          }, 1000);
-        } else {
-          row.classList.remove("highlight-red", "highlight-green");
-        }
-
-        row.innerHTML = `
-          <td><span>${idx + 1}</span></td>
-          <td class="age-cell"><span>${ageTime}</span></td>
-          <td class="price-cell"><span>${formatPrice(item.price)}</span></td>
-          <td><span>${formatQty(item.qty)}</span></td>
-          <td><span>${formatUsdt(item.usdt)}</span></td>
-          <td><span>${pct !== "---" ? pct + "%" : "---"}</span></td>
-          <td><span>${formatUsdt(accUsdt)}</span></td>
-          <td><span>${formatQty(accQty)}</span></td>
-          <td><span>${item.hits}</span></td>
-          <td>${selectedPrices.has(item.price) ? `<button class="select-price-btn" data-price="${item.price}">📍</button>` : `<span class="select-circle" data-price="${item.price}"></span>`}</td>
-        `;
-        fragment.appendChild(row);
-        existingRows.delete(item.price);
-      });
-
-      existingRows.forEach(row => {
-        const price = parseFloat(row.cells[2].textContent);
-        rowColors.delete(price);
-        row.remove();
-      });
-      tableBody.appendChild(fragment);
-      console.log(`Tabla ${tableId} actualizada con ${data.length} filas.`);
-    }
-
-    function updateAgeColumns() {
-      const now = Date.now();
-      ["asks-body", "bids-body"].forEach(tableId => {
+      try {
         const tableBody = document.getElementById(tableId);
+        const now = Date.now();
+
+        const existingRows = new Map();
         Array.from(tableBody.children).forEach(row => {
           const price = parseFloat(row.cells[2].textContent);
-          const data = tableId === "asks-body" ? asksData : bidsData;
-          const item = data.find(item => item.price === price);
-          if (item) {
-            const ageTime = formatAge(now - item.lastUpdated);
-            row.cells[1].querySelector('span').textContent = ageTime;
+          existingRows.set(price, row);
+        });
+
+        let accUsdt = 0;
+        let accQty = 0;
+
+        const fragment = document.createDocumentFragment();
+        data.forEach((item, idx) => {
+          const ageTime = formatAge(now - item.lastUpdated);
+          console.log(`Calculando edad para precio ${item.price}: now=${now}, lastUpdated=${item.lastUpdated}, age=${ageTime}`);
+          const pct = markPrice ? (((item.price - markPrice) / markPrice) * 100).toFixed(3) : "---";
+          
+          accUsdt += item.usdt;
+          accQty += item.qty;
+
+          console.log(`Formateando QTY: item.qty=${item.qty}, accQty=${accQty}`);
+
+          let row = existingRows.get(item.price);
+          if (!row) {
+            row = document.createElement("tr");
+            row.className = isAsk ? "ask-row" : "bid-row";
           }
+
+          if (selectedPrices.has(item.price)) {
+            row.classList.add("selected-row");
+          } else {
+            row.classList.remove("selected-row");
+          }
+
+          if (idx < 4) {
+            row.classList.add("highlight-top");
+          } else {
+            row.classList.remove("highlight-top");
+          }
+
+          const newColorClass = getColorClass(item.price, markPrice, isAsk, item.colorAssignedTime || now, now);
+          row.classList.remove("color-transparent", "color-blue", "color-yellow", "color-orange");
+          row.classList.add(newColorClass);
+          rowColors.set(item.price, newColorClass);
+
+          if (newColorClass !== "color-transparent") {
+            row.classList.add("bold-row");
+          } else {
+            row.classList.remove("bold-row");
+          }
+
+          const recentlyUpdated = item.lastUpdated && (now - item.lastUpdated) <= 1000;
+          if (recentlyUpdated) {
+            console.log(`Aplicando resaltado para precio ${item.price}: isAsk=${isAsk}, recentlyUpdated=${recentlyUpdated}`);
+            const highlightClass = isAsk ? "highlight-red" : "highlight-green";
+            row.classList.remove("highlight-red", "highlight-green");
+            row.classList.add(highlightClass);
+
+            setTimeout(() => {
+              try {
+                row.classList.remove("highlight-red", "highlight-green");
+                row.classList.remove("color-transparent", "color-blue", "color-yellow", "color-orange");
+                const updatedColorClass = getColorClass(item.price, currentPrice, isAsk, item.colorAssignedTime || now, now);
+                row.classList.add(updatedColorClass);
+                rowColors.set(item.price, updatedColorClass);
+                if (updatedColorClass !== "color-transparent") {
+                  row.classList.add("bold-row");
+                } else {
+                  row.classList.remove("bold-row");
+                }
+                console.log(`Reaplicado color class para precio ${item.price}: ${updatedColorClass}`);
+              } catch (err) {
+                console.error("Error al reaplicar clase de color después de resaltado:", err);
+                showError(`Error al reaplicar clase de color: ${err.message}`);
+              }
+            }, 1000);
+          } else {
+            row.classList.remove("highlight-red", "highlight-green");
+          }
+
+          console.log(`Generando botón de selección para precio ${item.price}: ${selectedPrices.has(item.price) ? "📍" : "círculo"}`);
+
+          row.innerHTML = `
+            <td><span>${idx + 1}</span></td>
+            <td class="age-cell"><span>${ageTime}</span></td>
+            <td class="price-cell"><span>${formatPrice(item.price)}</span></td>
+            <td><span>${formatQty(item.qty)}</span></td>
+            <td><span>${formatUsdt(item.usdt)}</span></td>
+            <td><span>${pct !== "---" ? pct + "%" : "---"}</span></td>
+            <td><span>${formatUsdt(accUsdt)}</span></td>
+            <td><span>${formatQty(accQty)}</span></td>
+            <td><span>${item.hits}</span></td>
+            <td>${selectedPrices.has(item.price) ? `<button class="select-price-btn" data-price="${item.price}">📍</button>` : `<span class="select-circle" data-price="${item.price}"></span>`}</td>
+          `;
+          fragment.appendChild(row);
+          existingRows.delete(item.price);
         });
-      });
-    }
 
-    setInterval(updateAgeColumns, 100);
-
-    function copyPriceCell(event) {
-      const cell = event.target.closest('.price-cell');
-      if (!cell) return;
-      const text = cell.textContent.trim();
-      
-      if (!text) {
-        console.error("No hay texto para copiar en la celda Price");
-        return;
-      }
-
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(text).then(() => {
-          cell.classList.add("copied");
-          setTimeout(() => cell.classList.remove("copied"), 500);
-          console.log(`Precio copiado: ${text}`);
-          isInteracting = false;
-        }).catch(err => {
-          console.error("Error al copiar el precio con navigator.clipboard:", err.message);
-          fallbackCopyText(text, cell);
+        existingRows.forEach(row => {
+          row.remove();
         });
-      } else {
-        console.warn("navigator.clipboard no disponible o contexto no seguro, usando fallback");
-        fallbackCopyText(text, cell);
-      }
 
-      event.preventDefault();
-    }
-
-    function fallbackCopyText(text, cell) {
-      const textArea = document.createElement("textarea");
-      textArea.value = text;
-      textArea.style.position = "fixed";
-      textArea.style.opacity = "0";
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      try {
-        document.execCommand('copy');
-        cell.classList.add("copied");
-        setTimeout(() => cell.classList.remove("copied"), 500);
-        console.log(`Precio copiado con fallback: ${text}`);
-        isInteracting = false;
+        tableBody.innerHTML = '';
+        tableBody.appendChild(fragment);
       } catch (err) {
-        console.error("Error al copiar con fallback:", err.message);
-      } finally {
-        document.body.removeChild(textArea);
+        console.error(`Error al actualizar la tabla ${tableId}:`, err);
+        showError(`Error al actualizar la tabla ${tableId}: ${err.message}`);
       }
     }
 
     function formatPrice(price) {
-      const decimals = getDecimalPlaces(symbol);
-      return price.toFixed(decimals).replace(/(\.\d+?)0+$/, "$1");
-    }
-
-    function getDecimalPlaces(symbol) {
-      const decimalPlaces = {
-        "USDT": 2,
-        "ETHUSDT": 4,
-        "PEPEUSDT": 8,
-        "SHIBUSDT": 8,
-        "BTCUSDT": 2,
-        "XRPUSDT": 4,
-        "SOLUSDT": 4
-      };
-      return decimalPlaces[symbol] || 4;
+      try {
+        if (typeof price !== 'number' || isNaN(price)) {
+          console.error("Precio inválido para formatear:", price);
+          return "0.0000";
+        }
+        return price.toFixed(4);
+      } catch (err) {
+        console.error("Error al formatear precio:", err);
+        return "0.0000";
+      }
     }
 
     function formatQty(qty) {
-      if (qty >= 1000) return (qty / 1000).toFixed(2) + "K";
-      return qty.toFixed(3);
+      try {
+        const numQty = parseFloat(qty);
+        if (isNaN(numQty)) {
+          console.error("Cantidad no es un número válido:", qty);
+          return "0.0000";
+        }
+        if (numQty >= 1_000_000_000) {
+          return `${(numQty / 1_000_000_000).toFixed(2)}B`;
+        } else if (numQty >= 1_000_000) {
+          return `${(numQty / 1_000_000).toFixed(2)}M`;
+        } else if (numQty >= 1_000) {
+          return `${(numQty / 1_000).toFixed(2)}K`;
+        } else {
+          return numQty.toFixed(4);
+        }
+      } catch (err) {
+        console.error("Error al formatear cantidad:", err);
+        return "0.0000";
+      }
     }
 
-    function formatAge(milliseconds) {
-      if (milliseconds < 0) {
-        console.warn(`Edad negativa detectada: ${milliseconds}ms`);
-        return "00:00:00";
+    function formatUsdt(usdt) {
+      try {
+        const numUsdt = parseFloat(usdt);
+        if (isNaN(numUsdt)) {
+          console.error("USDT no es un número válido:", usdt);
+          return "0.00";
+        }
+        if (numUsdt >= 1_000_000_000) {
+          return `${(numUsdt / 1_000_000_000).toFixed(2)}B`;
+        } else if (numUsdt >= 1_000_000) {
+          return `${(numUsdt / 1_000_000).toFixed(2)}M`;
+        } else if (numUsdt >= 1_000) {
+          return `${(numUsdt / 1_000).toFixed(2)}K`;
+        } else {
+          return numUsdt.toFixed(2);
+        }
+      } catch (err) {
+        console.error("Error al formatear USDT:", err);
+        return "0.00";
       }
-      const totalSeconds = Math.floor(milliseconds / 1000);
-      const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
-      const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
-      const seconds = String(totalSeconds % 60).padStart(2, "0");
-      return `${hours}:${minutes}:${seconds}`;
+    }
+
+    function formatAge(ms) {
+      try {
+        if (ms < 0) {
+          return "0s";
+        }
+        const seconds = Math.floor(ms / 1000);
+        if (seconds < 60) {
+          return `${seconds}s`;
+        }
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        if (minutes < 60) {
+          return `${minutes}m${remainingSeconds.toString().padStart(2, '0')}s`;
+        }
+        const hours = Math.floor(minutes / 60);
+        const remainingMinutes = minutes % 60;
+        return `${hours}h${remainingMinutes.toString().padStart(2, '0')}m`;
+      } catch (err) {
+        console.error("Error al formatear edad:", err);
+        return "0s";
+      }
+    }
+
+    function copyPriceCell(cell) {
+      try {
+        const priceText = cell.textContent.trim();
+        navigator.clipboard.writeText(priceText).then(() => {
+          cell.classList.add("copied");
+          console.log(`Precio copiado al portapapeles: ${priceText}`);
+          showDebug(`Precio copiado: ${priceText}`);
+        }).catch(err => {
+          console.error("Error al copiar precio:", err);
+          showError(`Error al copiar precio: ${err.message}`);
+        });
+      } catch (err) {
+        console.error("Error en copyPriceCell:", err);
+        showError(`Error al copiar precio: ${err.message}`);
+      }
     }
 
     function updateTimestamp() {
-      const now = new Date();
-      const offset = -4 * 60;
-      const localTime = new Date(now.getTime() + (offset * 60 * 1000));
-      const options = {
-        weekday: 'short',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        fractionalSecondDigits: 1,
-        hour12: true,
-        timeZone: 'UTC'
-      };
-      const formattedDate = localTime.toLocaleString('en-US', options)
-        .replace(',', '')
-        .replace(/\//g, '/')
-        .replace(' AM', ' AM')
-        .replace(' PM', ' PM');
-      document.getElementById('local-time').textContent = `${formattedDate} GMT-04:00`;
-    }
-
-    function formatUsdt(value) {
-      if (value >= 1.0e6) return (value / 1.0e6).toFixed(2) + "M";
-      if (value >= 1.0e3) return (value / 1.0e3).toFixed(2) + "K";
-      return value.toFixed(2);
-    }
-
-    console.log("Configurando event listeners y actualizando timestamp...");
-    setupEventListeners();
-    setInterval(updateTimestamp, 50);
-    showDebug("Script cargado y funcionando.");
-  </script>
-</body>
-</html>
+      try {
+        const now = new Date();
+        document.getElementById("local-time").innerText = `Local Time: ${now.toLocaleString
