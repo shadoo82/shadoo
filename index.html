@@ -94,12 +94,12 @@
       margin-bottom: 10px;
     }
     th, td {
-      padding: 6px;
+      padding: 4px;
       border: 1px solid #444;
       position: relative;
       cursor: pointer;
       line-height: 1.2;
-      font-size: 12px;
+      font-size: 14px;
     }
     th {
       background-color: #333;
@@ -193,7 +193,7 @@
       justify-content: center;
       padding: 4px;
       border-radius: 3px;
-      font-size: 12px;
+      font-size: 14px;
       background-color: #2f2f2f;
       color: #cccccc;
       line-height: 1.2;
@@ -267,7 +267,7 @@
       background-color: #444;
       cursor: pointer;
     }
-    .select-circle:hover {
+    .select  select-circle:hover {
       background-color: #666;
     }
     .selected-row {
@@ -276,52 +276,53 @@
     .pair-selector {
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 10px;
       margin-bottom: 10px;
       justify-content: flex-start;
+      flex-wrap: wrap;
     }
-    .pair-selector input {
+    .pair-selector input, .pair-selector button, .pair-selector select {
       background-color: #333;
       color: #ffffff;
       border: 1px solid #444;
       padding: 5px 10px;
       font-size: 16px;
       border-radius: 3px;
+    }
+    .pair-selector input {
       width: 150px;
       text-transform: uppercase;
+    }
+    .pair-selector button:hover, .pair-selector select:hover {
+      background-color: #444;
     }
   </style>
 </head>
 <body>
   <p id="local-time"></p>
-  <p id="current-price">Current Price: Loading...</p>
+  <p id="current-price">Precio actual: Cargando...</p>
   <div id="stats-timestamp">
-    <p>Diff Orderbook Processed: <span id="diff-orderbook">0</span></p>
-    <p>Total prices processed: <span id="total-prices">0</span></p>
-    <p>WebSocket Status: <span id="websocket-status">Connecting...</span></p>
+    <p>Diferencia procesada del libro de órdenes: <span id="diff-orderbook">0</span></p>
+    <p>Total de precios procesados: <span id="total-prices">0</span></p>
+    <p>Estado del WebSocket: <span id="websocket-status">Conectando...</span></p>
   </div>
   <div id="error-message" class="error-message"></div>
 
   <div class="pair-selector">
-    <input list="pair-options" id="pair-search" placeholder="Buscar par (ej. BTCUSDT)" value="BTCUSDT" oninput="filterPairs()" onchange="changePair()" onclick="this.value=''" />
+    <input list="pair-options" id="pair-search" placeholder="Buscar par (ej. BTCUSDT)" value="BTCUSDT" />
     <datalist id="pair-options"></datalist>
-  </div>
-  <div class="chart-controls">
-    <button onclick="autoScaleChart()">Auto Scale</button>
+    <button onclick="autoScaleChart()">Escala automática</button>
     <select id="timeframe-selector" onchange="changeTimeframe()">
       <option value="15m">15m</option>
       <option value="1h" selected>1h</option>
       <option value="4h">4h</option>
       <option value="1d">1d</option>
     </select>
-    <button onclick="exportLines()">Export/Import Lines</button>
+    <button onclick="exportLines()">Exportar/Importar líneas</button>
     <select id="zones-selector" onchange="updateZones()">
       <option value="10">10</option>
-      <option value="15">15</option>
+      <option value="15" selected>15</option>
       <option value="20">20</option>
-      <option value="25">25</option>
-      <option value="30" selected>30</option>
-      <option value="100">100</option>
     </select>
   </div>
   <div id="chart-container"></div>
@@ -337,24 +338,24 @@
         <thead>
           <tr>
             <th>#</th>
-            <th>Age</th>
-            <th>Price</th>
-            <th>QTY</th>
+            <th>Edad</th>
+            <th>Precio</th>
+            <th>Cant.</th>
             <th>USDT</th>
-            <th>% to price</th>
-            <th>Acc USDT</th>
-            <th>Acc QTY</th>
-            <th>Hits</th>
-            <th>Select</th>
+            <th>% al precio</th>
+            <th>Acum. USDT</th>
+            <th>Acum. Cant.</th>
+            <th>Impactos</th>
+            <th>Seleccionar</th>
           </tr>
         </thead>
         <tbody id="bids-body"></tbody>
       </table>
       <div class="legend">
-        <div class="legend-row bid-updated-legend">Bid updated (Buy, Black Text)</div>
-        <div class="legend-row" style="background-color: #090ef5; color: #ffffff;">Bids Within 0.5% to 1% of markPrice (White Text)</div>
-        <div class="legend-row" style="background-color: #e0f30a; color: #000000;">Bids Within 0.1% to 0.5% of markPrice (Black Text)</div>
-        <div class="legend-row" style="background-color: #f5550f; color: #000000;">Bids Within 0.1% of markPrice (Black Text)</div>
+        <div class="legend-row bid-updated-legend">Bid actualizado (Compra, Texto Negro)</div>
+        <div class="legend-row" style="background-color: #090ef5; color: #ffffff;">Bids dentro de 0.5% a 1% del markPrice (Texto Blanco)</div>
+        <div class="legend-row" style="background-color: #e0f30a; color: #000000;">Bids dentro de 0.1% a 0.5% del markPrice (Texto Negro)</div>
+        <div class="legend-row" style="background-color: #f5550f; color: #000000;">Bids dentro de 0.1% del markPrice (Texto Negro)</div>
       </div>
     </div>
 
@@ -368,24 +369,24 @@
         <thead>
           <tr>
             <th>#</th>
-            <th>Age</th>
-            <th>Price</th>
-            <th>QTY</th>
+            <th>Edad</th>
+            <th>Precio</th>
+            <th>Cant.</th>
             <th>USDT</th>
-            <th>% to price</th>
-            <th>Acc USDT</th>
-            <th>Acc QTY</th>
-            <th>Hits</th>
-            <th>Select</th>
+            <th>% al precio</th>
+            <th>Acum. USDT</th>
+            <th>Acum. Cant.</th>
+            <th>Impactos</th>
+            <th>Seleccionar</th>
           </tr>
         </thead>
         <tbody id="asks-body"></tbody>
       </table>
       <div class="legend">
-        <div class="legend-row" style="background-color: rgba(249, 12, 12, 0.5); color: #ffffff;">Ask updated (Sell, White Text)</div>
-        <div class="legend-row" style="background-color: #090ef5; color: #ffffff;">Asks Within 0.5% to 1% of markPrice (White Text)</div>
-        <div class="legend-row" style="background-color: #e0f30a; color: #000000;">Asks Within 0.1% to 0.5% of markPrice (Black Text)</div>
-        <div class="legend-row" style="background-color: #f5550f; color: #000000;">Asks Within 0.1% of markPrice (Black Text)</div>
+        <div class="legend-row" style="background-color: rgba(249, 12, 12, 0.5); color: #ffffff;">Ask actualizado (Venta, Texto Blanco)</div>
+        <div class="legend-row" style="background-color: #090ef5; color: #ffffff;">Asks dentro de 0.5% a 1% del markPrice (Texto Blanco)</div>
+        <div class="legend-row" style="background-color: #e0f30a; color: #000000;">Asks dentro de 0.1% a 0.5% del markPrice (Texto Negro)</div>
+        <div class="legend-row" style="background-color: #f5550f; color: #000000;">Asks dentro de 0.1% del markPrice (Texto Negro)</div>
       </div>
     </div>
   </div>
@@ -409,17 +410,15 @@
     let pendingUpdate = false;
     let lastPriceUpdateTime = 0;
     let lastDepthUpdateTime = 0;
-    let isInteracting = false;
-    const INTERACTION_TIMEOUT_MS = 2000;
+    const TABLE_UPDATE_DEBOUNCE_MS = 500;
     const rowColors = new Map();
     const COLOR_DURATION_MS = 5000;
     let selectedPrices = new Map();
     let lastTableUpdate = 0;
-    const TABLE_UPDATE_DEBOUNCE_MS = 100;
     let klineReconnectAttempts = 0;
     const MAX_RECONNECT_ATTEMPTS = 5;
-    const RECONNECT_DELAY_MS = 5000;
-    let maxZones = 30;
+    const RECONNECT_DELAY_MS = 7000;
+    let maxZones = 15;
     let tickerSocket = null;
     let depthFuturesSocket = null;
     let depthSpotSocket = null;
@@ -460,7 +459,7 @@
 
           allPairs = [...new Set([...futuresPairs, ...spotPairs])].sort();
           populatePairSelector();
-          console.log("Pares obtenidos exitosamente:", allPairs.length);
+          console.log("Pares obtenidos:", allPairs);
           document.getElementById("error-message").innerText = "";
           return;
         } catch (error) {
@@ -486,6 +485,7 @@
       allPairs.forEach((pair) => {
         const option = document.createElement("option");
         option.value = pair;
+        option.textContent = pair;
         pairSelector.appendChild(option);
       });
       document.getElementById("pair-search").value = symbol;
@@ -494,13 +494,16 @@
     function filterPairs() {
       const pairSearch = document.getElementById("pair-search");
       pairSearch.value = pairSearch.value.toUpperCase();
-      const searchInput = pairSearch.value;
+      const searchInput = pairSearch.value.trim();
       const pairSelector = document.getElementById("pair-options");
       pairSelector.innerHTML = "";
-      const filteredPairs = allPairs.filter((pair) => pair.toUpperCase().includes(searchInput));
+      const filteredPairs = allPairs.filter((pair) =>
+        pair.toUpperCase().includes(searchInput)
+      );
       filteredPairs.forEach((pair) => {
         const option = document.createElement("option");
         option.value = pair;
+        option.textContent = pair;
         pairSelector.appendChild(option);
       });
     }
@@ -529,7 +532,7 @@
         loadHistoricalKlines();
 
         document.getElementById("pair-search").value = symbol;
-        document.getElementById("current-price").innerText = `${symbol} Price: Loading...`;
+        document.getElementById("current-price").innerText = `Precio de ${symbol}: Cargando...`;
         document.getElementById("asks-total").innerText = `ASKS - 0 | TOTAL: 0`;
         document.getElementById("bids-total").innerText = `BIDS - 0 | TOTAL: 0`;
         document.getElementById("diff-orderbook").innerText = "0";
@@ -613,6 +616,50 @@
       setupChartInteractions();
     }
 
+    function autoZoomChart() {
+$
+
+      if (!chart || !candlesData || candlesData.length === 0) return;
+
+      const timeframe = currentTimeframe;
+      let candlesToShow;
+
+      switch (timeframe) {
+        case "15m":
+          candlesToShow = 8;
+          break;
+        case "1h":
+          candlesToShow = 12;
+          break;
+        case "4h":
+          candlesToShow = 12;
+          break;
+        case "1d":
+          candlesToShow = 7;
+          break;
+        default:
+          candlesToShow = 12;
+      }
+
+      const startIndex = Math.max(0, candlesData.length - candlesToShow);
+      const visibleCandles = candlesData.slice(startIndex);
+
+      if (visibleCandles.length === 0) return;
+
+      const fromTime = visibleCandles[0].time;
+      const toTime = visibleCandles[visibleCandles.length - 1].time;
+
+      chart.timeScale().setVisibleRange({
+        from: fromTime,
+        to: toTime,
+      });
+
+      chart.priceScale().applyOptions({
+        autoScale: true,
+        scaleMargins: { top: 0.1, bottom: 0.1 },
+      });
+    }
+
     function getVisiblePriceRange() {
       if (!candlesData || candlesData.length === 0) return { minPrice: 0, maxPrice: 0 };
       const visibleRange = chart.timeScale().getVisibleRange();
@@ -666,7 +713,7 @@
               color: closestLine.isAsk ? "#ff0000" : "#00ff00",
               lineWidth: 1,
               lineStyle: LightweightCharts.LineStyle.Dashed,
-              title: "✖ Close",
+              title: "✖ Cerrar",
             });
           }
 
@@ -766,13 +813,25 @@
     function ensureChartVisibility() {
       if (chart && candlestickSeries && candlesData.length > 0) {
         candlestickSeries.setData(candlesData);
-        chart.timeScale().fitContent();
+        autoZoomChart();
       }
     }
 
     function saveHistoricalKlines() {
       const key = `${symbol}_${currentTimeframe}_klines`;
-      localStorage.setItem(key, JSON.stringify(candlesData));
+      try {
+        // Validar los datos antes de guardarlos
+        const validCandles = candlesData.filter(candle =>
+          candle.time && !isNaN(candle.open) && !isNaN(candle.high) &&
+          !isNaN(candle.low) && !isNaN(candle.close)
+        );
+        if (validCandles.length > 0) {
+          localStorage.setItem(key, JSON.stringify(validCandles));
+        }
+      } catch (error) {
+        console.error("Error al guardar velas históricas en localStorage:", error);
+        document.getElementById("error-message").innerText = "Error al guardar datos históricos en almacenamiento local: " + error.message;
+      }
     }
 
     function loadHistoricalKlinesFromStorage() {
@@ -780,48 +839,91 @@
       const savedData = localStorage.getItem(key);
       if (savedData) {
         try {
-          candlesData = JSON.parse(savedData);
-          if (candlestickSeries && candlesData.length > 0) {
-            candlestickSeries.setData(candlesData);
-            chart.timeScale().fitContent();
+          const parsedData = JSON.parse(savedData);
+          // Validar cada vela cargada
+          const validCandles = parsedData.filter(candle =>
+            candle.time && !isNaN(candle.open) && !isNaN(candle.high) &&
+            !isNaN(candle.low) && !isNaN(candle.close)
+          );
+          if (validCandles.length > 0) {
+            candlesData = validCandles;
+            if (candlestickSeries) {
+              candlestickSeries.setData(candlesData);
+              autoZoomChart();
+            }
+            return true;
           }
-          return true;
+          console.warn("Datos de velas en localStorage no válidos, intentando carga desde API...");
+          return false;
         } catch (error) {
-          console.error("Error parsing historical klines from storage:", error);
+          console.error("Error al parsear velas históricas desde localStorage:", error);
+          document.getElementById("error-message").innerText = "Error al cargar datos históricos desde almacenamiento local: " + error.message;
           return false;
         }
       }
       return false;
     }
 
-    async function loadHistoricalKlines() {
+    async function loadHistoricalKlines(maxRetries = 3, delayMs = 5000) {
+      // Intentar cargar desde localStorage primero
       if (loadHistoricalKlinesFromStorage()) {
+        console.log("Velas cargadas desde localStorage exitosamente.");
         return;
       }
-      try {
-        const response = await fetch(klineRestUrl);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+
+      // Si no hay datos en localStorage, intentar cargar desde la API
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`Intentando cargar velas históricas desde API (Intento ${attempt}/${maxRetries})...`);
+          const response = await fetch(klineRestUrl);
+          if (!response.ok) {
+            throw new Error(`Error HTTP! Estado: ${response.status} - ${response.statusText}`);
+          }
+          const data = await response.json();
+          if (!Array.isArray(data)) {
+            throw new Error("Formato de datos de velas inválido: no es un arreglo");
+          }
+          if (data.length === 0) {
+            throw new Error("No se recibieron datos de velas de la API");
+          }
+
+          // Procesar los datos recibidos
+          candlesData = data.map((kline) => {
+            const time = Math.floor(kline[0] / 1000);
+            const open = parseFloat(kline[1]);
+            const high = parseFloat(kline[2]);
+            const low = parseFloat(kline[3]);
+            const close = parseFloat(kline[4]);
+            if (isNaN(time) || isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close)) {
+              throw new Error("Valores de vela inválidos en los datos recibidos");
+            }
+            return { time, open, high, low, close };
+          });
+
+          if (candlestickSeries && candlesData.length > 0) {
+            candlestickSeries.setData(candlesData);
+            autoZoomChart();
+            saveHistoricalKlines();
+            console.log("Velas históricas cargadas exitosamente desde la API.");
+            document.getElementById("error-message").innerText = "";
+            return;
+          } else {
+            throw new Error("No se pudieron procesar los datos de las velas");
+          }
+        } catch (error) {
+          console.error(`Error al cargar velas históricas (Intento ${attempt}/${maxRetries}):`, error);
+          const errorMessage = `Error al cargar velas históricas (Intento ${attempt}/${maxRetries}): ${error.message}`;
+          document.getElementById("error-message").innerText = errorMessage;
+
+          if (attempt < maxRetries) {
+            console.log(`Reintentando en ${delayMs / 1000} segundos...`);
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+          } else {
+            console.error("No se pudieron cargar las velas históricas después de varios intentos.");
+            document.getElementById("error-message").innerText =
+              "No se pudieron cargar las velas históricas después de varios intentos. Por favor, intenta con otro par o temporalidad.";
+          }
         }
-        const data = await response.json();
-        if (!Array.isArray(data)) {
-          throw new Error("Invalid kline data format");
-        }
-        candlesData = data.map((kline) => ({
-          time: Math.floor(kline[0] / 1000),
-          open: parseFloat(kline[1]),
-          high: parseFloat(kline[2]),
-          low: parseFloat(kline[3]),
-          close: parseFloat(kline[4]),
-        }));
-        if (candlestickSeries && candlesData.length > 0) {
-          candlestickSeries.setData(candlesData);
-          chart.timeScale().fitContent();
-          saveHistoricalKlines();
-        }
-      } catch (error) {
-        console.error("Error loading historical klines:", error);
-        document.getElementById("error-message").innerText = "Error loading historical data: " + error.message;
       }
     }
 
@@ -837,28 +939,31 @@
       klineSocket.onopen = () => {
         klineReconnectAttempts = 0;
         updateWebSocketStatus();
+        console.log("WebSocket de Kline abierto para la temporalidad:", currentTimeframe);
+        document.getElementById("error-message").innerText = "";
       };
       klineSocket.onclose = (event) => {
         updateWebSocketStatus();
         if (!isChangingTimeframe && klineReconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
           klineReconnectAttempts++;
+          console.log(`WebSocket de Kline cerrado. Reconectando (intento ${klineReconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
           setTimeout(() => {
             setupKlineSocket();
           }, RECONNECT_DELAY_MS * klineReconnectAttempts);
         } else if (klineReconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-          document.getElementById("error-message").innerText = "Max reconnection attempts reached for Kline WebSocket.";
+          document.getElementById("error-message").innerText = "Se alcanzó el máximo de intentos de reconexión para el WebSocket de Kline.";
         }
       };
       klineSocket.onerror = (error) => {
-        console.error("Kline WebSocket error:", error);
+        console.error("Error en el WebSocket de Kline:", error);
         updateWebSocketStatus();
-        document.getElementById("error-message").innerText = "Kline WebSocket error occurred.";
+        document.getElementById("error-message").innerText = "Ocurrió un error en el WebSocket de Kline: " + (error.message || "Desconocido");
       };
       klineSocket.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           if (!data || !data.k) {
-            throw new Error("Invalid kline data format");
+            throw new Error("Formato de datos de kline inválido");
           }
           const kline = data.k;
           const time = Math.floor(kline.t / 1000);
@@ -867,8 +972,8 @@
           const low = parseFloat(kline.l);
           const close = parseFloat(kline.c);
 
-          if (isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close)) {
-            throw new Error("Invalid kline values");
+          if (isNaN(time) || isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close)) {
+            throw new Error("Valores de kline inválidos");
           }
 
           const candleData = { time, open, high, low, close };
@@ -889,8 +994,8 @@
             saveHistoricalKlines();
           }
         } catch (error) {
-          console.error("Error processing kline message:", error);
-          document.getElementById("error-message").innerText = "Error processing kline data: " + error.message;
+          console.error("Error al procesar mensaje de kline:", error);
+          document.getElementById("error-message").innerText = "Error al procesar datos de kline: " + error.message;
         }
       };
     }
@@ -898,11 +1003,14 @@
     function changeTimeframe() {
       if (isChangingTimeframe) return;
       isChangingTimeframe = true;
+
       const newTimeframe = document.getElementById("timeframe-selector").value;
       if (newTimeframe === currentTimeframe) {
         isChangingTimeframe = false;
         return;
       }
+
+      console.log(`Cambiando temporalidad de ${currentTimeframe} a ${newTimeframe}`);
       currentTimeframe = newTimeframe;
       klineWsUrl = `wss://fstream.binance.com/ws/${symbol.toLowerCase()}@kline_${currentTimeframe}`;
       klineRestUrl = `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol.toUpperCase()}&interval=${currentTimeframe}&limit=100`;
@@ -919,13 +1027,13 @@
       loadHistoricalKlines()
         .then(() => {
           setupKlineSocket();
-          ensureChartVisibility();
           isChangingTimeframe = false;
+          console.log("Temporalidad cambiada exitosamente a", currentTimeframe);
         })
         .catch((error) => {
-          console.error("Error in changeTimeframe:", error);
+          console.error("Error al cambiar temporalidad:", error);
           isChangingTimeframe = false;
-          document.getElementById("error-message").innerText = "Error changing timeframe: " + error.message;
+          document.getElementById("error-message").innerText = "Error al cambiar temporalidad: " + error.message;
         });
     }
 
@@ -971,10 +1079,17 @@
               setupEventListeners();
               updateTimestamp();
               setInterval(updateTimestamp, 1000);
+
+              const pairSearch = document.getElementById("pair-search");
+              pairSearch.addEventListener("input", filterPairs);
+              pairSearch.addEventListener("change", changePair);
+              pairSearch.addEventListener("click", () => {
+                pairSearch.value = "";
+              });
             })
             .catch((error) => {
-              console.error("Error initializing app:", error);
-              document.getElementById("error-message").innerText = "Error initializing app: " + error.message;
+              console.error("Error al inicializar la aplicación:", error);
+              document.getElementById("error-message").innerText = "Error al inicializar la aplicación: " + error.message;
             });
         }
       });
@@ -1013,7 +1128,7 @@
             }
           });
         } catch (error) {
-          console.error("Error loading selected prices:", error);
+          console.error("Error al cargar precios seleccionados:", error);
         }
       }
     }
@@ -1054,7 +1169,7 @@
         color: lineColor,
         lineWidth: 1,
         lineStyle: LightweightCharts.LineStyle.Solid,
-        title: `Price: ${formatPrice(price)}`,
+        title: `Precio: ${formatPrice(price)}`,
       });
 
       selectedPrices.set(price, { series: lineSeries, price: price, isAsk: isAsk, marker: null });
@@ -1117,11 +1232,7 @@
             const price = parseFloat(selectBtn.dataset.price);
             const row = selectBtn.closest("tr");
             if (row && !isNaN(price)) {
-              isInteracting = true;
               drawSelectedPriceLine(price, row, isAsk);
-              setTimeout(() => {
-                isInteracting = false;
-              }, INTERACTION_TIMEOUT_MS);
             }
           }
         });
@@ -1131,11 +1242,7 @@
           if (priceCell) {
             event.stopPropagation();
             event.preventDefault();
-            isInteracting = true;
             copyPriceCell(priceCell);
-            setTimeout(() => {
-              isInteracting = false;
-            }, INTERACTION_TIMEOUT_MS);
           }
         });
       });
@@ -1149,54 +1256,54 @@
       if (klineSocket && klineSocket.readyState === WebSocket.OPEN) statuses.push("kline");
 
       if (statuses.length === 4) {
-        document.getElementById("websocket-status").innerText = "Connected";
+        document.getElementById("websocket-status").innerText = "Conectado";
       } else if (statuses.length > 0) {
-        document.getElementById("websocket-status").innerText = `Partially Connected (${statuses.join(", ")})`;
+        document.getElementById("websocket-status").innerText = `Parcialmente conectado (${statuses.join(", ")})`;
       } else {
-        document.getElementById("websocket-status").innerText = "Disconnected";
+        document.getElementById("websocket-status").innerText = "Desconectado";
       }
     }
 
     function setupTickerSocket() {
       const socket = new WebSocket(tickerWsUrl);
       socket.onopen = () => {
-        console.log("Ticker WebSocket opened");
+        console.log("WebSocket de Ticker abierto");
         updateWebSocketStatus();
       };
       socket.onclose = () => {
-        console.log("Ticker WebSocket closed");
+        console.log("WebSocket de Ticker cerrado");
         updateWebSocketStatus();
         setTimeout(() => {
           tickerSocket = setupTickerSocket();
         }, RECONNECT_DELAY_MS);
       };
       socket.onerror = (error) => {
-        console.error("Ticker WebSocket error:", error);
+        console.error("Error en el WebSocket de Ticker:", error);
         updateWebSocketStatus();
-        document.getElementById("error-message").innerText = "Ticker WebSocket error occurred.";
+        document.getElementById("error-message").innerText = "Ocurrió un error en el WebSocket de Ticker.";
       };
       socket.onmessage = (event) => {
         try {
           const startTime = performance.now();
           const data = JSON.parse(event.data);
           if (!Array.isArray(data)) {
-            throw new Error("Invalid ticker data format");
+            throw new Error("Formato de datos de ticker inválido");
           }
           const symbolData = data.find((item) => item && item.s === symbol.toUpperCase());
           if (symbolData && symbolData.c) {
             const newPrice = parseFloat(symbolData.c);
             if (isNaN(newPrice)) {
-              throw new Error("Invalid price value in ticker data");
+              throw new Error("Valor de precio inválido en datos de ticker");
             }
             currentPrice = newPrice;
             markPrice = parseFloat(symbolData.p) || currentPrice;
-            document.getElementById("current-price").innerText = `${symbol} Price: ${formatPrice(currentPrice)}`;
+            document.getElementById("current-price").innerText = `Precio de ${symbol}: ${formatPrice(currentPrice)}`;
             lastPriceUpdateTime = startTime;
             scheduleTableUpdate();
           }
         } catch (error) {
-          console.error("Error processing ticker message:", error);
-          document.getElementById("error-message").innerText = "Error processing ticker data: " + error.message;
+          console.error("Error al procesar mensaje de ticker:", error);
+          document.getElementById("error-message").innerText = "Error al procesar datos de ticker: " + error.message;
         }
       };
       return socket;
@@ -1205,31 +1312,33 @@
     function setupDepthFuturesSocket() {
       if (!futuresPairs.includes(symbol)) {
         console.warn(`El par ${symbol} no está disponible en futuros.`);
+        document.getElementById("error-message").innerText = `El par ${symbol} no está disponible en futuros. Intenta con otro par.`;
         return null;
       }
       const socket = new WebSocket(depthFuturesWsUrl);
       socket.onopen = () => {
-        console.log("Depth Futures WebSocket opened");
+        console.log("WebSocket de Futuros abierto");
         updateWebSocketStatus();
+        document.getElementById("error-message").innerText = "";
       };
       socket.onclose = () => {
-        console.log("Depth Futures WebSocket closed");
+        console.log("WebSocket de Futuros cerrado");
         updateWebSocketStatus();
         setTimeout(() => {
           depthFuturesSocket = setupDepthFuturesSocket();
         }, RECONNECT_DELAY_MS);
       };
       socket.onerror = (error) => {
-        console.error("Depth Futures WebSocket error:", error);
+        console.error("Error en el WebSocket de Futuros:", error);
         updateWebSocketStatus();
-        document.getElementById("error-message").innerText = "Depth Futures WebSocket error occurred.";
+        document.getElementById("error-message").innerText = `Error en el WebSocket de Futuros: ${error.message || 'Desconocido'}. Reintentando...`;
       };
       socket.onmessage = (event) => {
         try {
           const startTime = performance.now();
           const data = JSON.parse(event.data);
           if (!data || (!data.a && !data.b)) {
-            throw new Error("Invalid depth data format");
+            throw new Error("Formato de datos de profundidad inválido");
           }
           const now = Date.now();
 
@@ -1244,8 +1353,8 @@
 
           processDepthData();
         } catch (error) {
-          console.error("Error processing depth futures message:", error);
-          document.getElementById("error-message").innerText = "Error processing depth futures data: " + error.message;
+          console.error("Error al procesar mensaje de profundidad de futuros:", error);
+          document.getElementById("error-message").innerText = "Error al procesar datos de profundidad de futuros: " + error.message;
         }
       };
       return socket;
@@ -1258,27 +1367,27 @@
       }
       depthSpotSocket = new WebSocket(depthSpotWsUrl);
       depthSpotSocket.onopen = () => {
-        console.log("Depth Spot WebSocket opened");
+        console.log("WebSocket de Spot abierto");
         updateWebSocketStatus();
       };
       depthSpotSocket.onclose = () => {
-        console.log("Depth Spot WebSocket closed");
+        console.log("WebSocket de Spot cerrado");
         updateWebSocketStatus();
         setTimeout(() => {
           setupDepthSpotSocket();
         }, RECONNECT_DELAY_MS);
       };
       depthSpotSocket.onerror = (error) => {
-        console.error("Depth Spot WebSocket error:", error);
+        console.error("Error en el WebSocket de Spot:", error);
         updateWebSocketStatus();
-        document.getElementById("error-message").innerText = "Depth Spot WebSocket error occurred.";
+        document.getElementById("error-message").innerText = "Ocurrió un error en el WebSocket de Spot.";
       };
       depthSpotSocket.onmessage = (event) => {
         try {
           const startTime = performance.now();
           const data = JSON.parse(event.data);
           if (!data || (!data.a && !data.b)) {
-            throw new Error("Invalid depth data format");
+            throw new Error("Formato de datos de profundidad inválido");
           }
           const now = Date.now();
 
@@ -1293,8 +1402,8 @@
 
           processDepthData();
         } catch (error) {
-          console.error("Error processing depth spot message:", error);
-          document.getElementById("error-message").innerText = "Error processing depth spot data: " + error.message;
+          console.error("Error al procesar mensaje de profundidad de spot:", error);
+          document.getElementById("error-message").innerText = "Error al procesar datos de profundidad de spot: " + error.message;
         }
       };
     }
@@ -1354,13 +1463,6 @@
       if (!pendingUpdate) {
         pendingUpdate = true;
         const now = Date.now();
-        if (isInteracting) {
-          setTimeout(() => {
-            pendingUpdate = false;
-            scheduleTableUpdate();
-          }, TABLE_UPDATE_DEBOUNCE_MS);
-          return;
-        }
         if (now - lastTableUpdate < TABLE_UPDATE_DEBOUNCE_MS) {
           setTimeout(() => {
             pendingUpdate = false;
@@ -1383,7 +1485,7 @@
         const price = parseFloat(p);
         const qty = parseFloat(q);
         if (isNaN(price) || isNaN(qty)) {
-          console.warn(`Invalid price or qty: price=${p}, qty=${q}`);
+          console.warn(`Precio o cantidad inválida: price=${p}, qty=${q}`);
           return;
         }
         const usdt = price * qty;
@@ -1536,7 +1638,7 @@
           cell.classList.add("copied");
         })
         .catch((err) => {
-          console.error("Error copying price:", err);
+          console.error("Error al copiar precio:", err);
         });
     }
 
