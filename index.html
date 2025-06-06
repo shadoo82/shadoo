@@ -284,18 +284,6 @@
     .selected-column:hover {
       background-color: rgba(0, 255, 0, 0.1);
     }
-    .selected-column:hover::after {
-      content: 'Actualizaciones pausadas';
-      position: absolute;
-      top: -20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #333;
-      color: #fff;
-      padding: 2px 5px;
-      font-size: 10px;
-      border-radius: 3px;
-    }
     .selection-checkbox {
       cursor: pointer;
     }
@@ -1142,8 +1130,8 @@
           params: [`${symbol.toLowerCase()}@kline_${currentInterval}`],
           id: 1
         };
-        console.log(`Enviando mensaje de suscripción: ${JSON.stringify(mensajeSuscripción)}`);
-        klineWs.send(JSON.stringify(mensajeSuscripción));
+        console.log(`Enviando mensaje de suscripción: ${JSON.stringify(mensajeSuscripcion)}`);
+        klineWs.send(JSON.stringify(mensajeSuscripcion));
       };
       klineWs.onerror = (error) => {
         mostrarError(`Error en WebSocket Kline para ${currentInterval}: ${JSON.stringify(error)}`);
@@ -1416,7 +1404,7 @@
       document.getElementById("total-prices").innerText = totalPrecios.toLocaleString();
       document.getElementById("asks-processed").innerText = asksProcessed.toLocaleString();
       document.getElementById("bids-processed").innerText = bidsProcessed.toLocaleString();
-      if (totalPrecios > 250000) {
+      if (totalPrecios >= 1000000) {
         document.getElementById("total-prices").classList.add("highlight-total");
       } else {
         document.getElementById("total-prices").classList.remove("highlight-total");
