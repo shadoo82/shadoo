@@ -27,8 +27,14 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      flex-basis: 30%;
-      min-width: 150px;
+      flex-basis: 40%;
+      min-width: 250px;
+    }
+    .search-container {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-grow: 1;
     }
     .time-stats {
       flex: 1;
@@ -46,18 +52,6 @@
       justify-content: flex-end;
       gap: 5px;
       min-width: 120px;
-    }
-    .header-controls .back-button button {
-      background-color: #00ff00;
-      color: #000000;
-      border: none;
-      padding: 8px 16px;
-      font-size: 14px;
-      cursor: pointer;
-      border-radius: 5px;
-    }
-    .header-controls .back-button button:hover {
-      background-color: #00cc00;
     }
     .header-controls h1 {
       margin: 0;
@@ -290,22 +284,18 @@
     .selection-checkbox:active {
       outline: 2px solid #00ff00;
     }
-    .search-container {
-      margin-bottom: 20px;
-      text-align: center;
-    }
     .search-container label {
-      margin-right: 10px;
+      margin-right: 5px;
       font-size: 14px;
     }
     .search-container input {
       background-color: #2f2f2f;
       color: #ffffff;
       border: 1px solid #444;
-      padding: 8px;
+      padding: 5px;
       font-size: 14px;
       border-radius: 5px;
-      width: 200px;
+      width: 150px;
     }
     .search-container input:focus {
       outline: none;
@@ -323,20 +313,23 @@
         justify-content: center;
         text-align: center;
       }
+      .search-container {
+        width: 100%;
+      }
+      .search-container input {
+        width: 80%;
+      }
     }
   </style>
   <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
-  <div class="search-container">
-    <label for="symbol-search">Buscar par USDT:</label>
-    <input type="text" id="symbol-search" placeholder="Ejemplo: BTCUSDT" list="symbol-list" autocomplete="off" onmouseover="this.value=''">
-    <datalist id="symbol-list"></datalist>
-  </div>
   <div class="header-controls">
     <div class="header-left">
-      <div class="back-button">
-        <button onclick="window.location.href='/'">Atrás</button>
+      <div class="search-container">
+        <label for="symbol-search">Buscar par USDT:</label>
+        <input type="text" id="symbol-search" placeholder="Ejemplo: BTCUSDT" list="symbol-list" autocomplete="off" onmouseover="this.value=''">
+        <datalist id="symbol-list"></datalist>
       </div>
       <h1 id="symbol-title"></h1>
     </div>
@@ -462,6 +455,7 @@
     const errorMessageElement = document.getElementById("error-message");
     let chart = null;
     let candlestickSeries = null;
+    let emaSeries = null;
     let candlesData = [];
 
     function mostrarError(mensaje) {
@@ -1001,11 +995,11 @@
         if (!chartContainer) {
           throw new Error("Contenedor del gráfico no encontrado (#chart-container).");
         }
-        // Limpiar gráfico existente
         if (chart) {
           chart.remove();
           chart = null;
           candlestickSeries = null;
+          emaSeries = null;
           selectedPrices.forEach((data, price) => {
             if (data.series) {
               chart.removeSeries(data.series);
@@ -1042,6 +1036,11 @@
           wickUpColor: '#00ff00',
           wickDownColor: '#ff0000',
         });
+        emaSeries = chart.addLineSeries({
+          color: '#ff9800',
+          lineWidth: 2,
+          title: 'EMA 100',
+        });
         chart.applyOptions({
           priceScale: {
             scaleMargins: { top: 0.1, bottom: 0.1 },
@@ -1070,6 +1069,10 @@
         }));
         if (candlestickSeries) {
           candlestickSeries.setData(candlesData);
+          const ema100 = calculateEMA(candlesData, 100);
+          if (emaSeries) {
+            emaSeries.setData(ema100);
+          }
           chart.timeScale().fitContent();
         } else {
           console.warn("candlestickSeries no está inicializada. No se puede cargar el historial de velas.");
@@ -1097,9 +1100,28 @@
         }).reverse();
         if (candlestickSeries) {
           candlestickSeries.setData(candlesData);
+          const ema100 = calculateEMA(candlesData, 100);
+          if (emaSeries) {
+            emaSeries.setData(ema100);
+          }
           chart.timeScale().fitContent();
         }
       }
+    }
+
+    function calculateEMA(data, period) {
+      if (data.length < period) return [];
+      const k = 2 / (period + 1);
+      const emaData = [];
+      let ema = data.slice(0, period).reduce((sum, candle) => sum + candle.close, 0) / period;
+
+      emaData.push({ time: data[period - 1].time, value: ema });
+
+      for (let i = period; i < data.length; i++) {
+        ema = (data[i].close * k) + (ema * (1 - k));
+        emaData.push({ time: data[i].time, value: ema });
+      }
+      return emaData;
     }
 
     function setupKlineSocket() {
@@ -1108,7 +1130,6 @@
         iniciarPollingRest();
         return;
       }
-      // Forzar limpieza antes de intentar una nueva conexión
       limpiarWebSocketKline();
       if (wsConnectionCount >= 5) {
         mostrarError(`Límite de conexiones WebSocket alcanzado (${wsConnectionCount}). Intentando de nuevo...`);
@@ -1182,19 +1203,29 @@
           if (vela.x || (now >= candleEndTime)) {
             if (lastCandle && lastCandle.time === time) {
               candlestickSeries.update(candleData);
-              candlesData[candlesData.length - 1] = candleData;
             } else {
               candlesData.push(candleData);
               candlestickSeries.setData(candlesData);
-              chart.timeScale().fitContent();
+              const ema100 = calculateEMA(candlesData, 100);
+              if (emaSeries) {
+                emaSeries.setData(ema100);
+              }
               if (candlesData.length > 150) {
                 candlesData.shift();
                 candlestickSeries.setData(candlesData);
+                const ema100 = calculateEMA(candlesData, 100);
+                if (emaSeries) {
+                  emaSeries.setData(ema100);
+                }
               }
             }
+            chart.timeScale().fitContent();
           } else if (lastCandle && lastCandle.time === time) {
             candlestickSeries.update(candleData);
-            candlesData[candlesData.length - 1] = candleData;
+            const ema100 = calculateEMA(candlesData, 100);
+            if (emaSeries) {
+              emaSeries.setData(ema100);
+            }
           }
         } catch (err) {
           mostrarError(`Error al procesar mensaje de Kline (${currentInterval}): ${err.message}`);
@@ -1251,14 +1282,26 @@
             if (!lastCandle || lastCandle.time !== time) {
               candlesData.push(candleData);
               candlestickSeries.setData(candlesData);
+              const ema100 = calculateEMA(candlesData, 100);
+              if (emaSeries) {
+                emaSeries.setData(ema100);
+              }
               if (candlesData.length > 150) {
                 candlesData.shift();
                 candlestickSeries.setData(candlesData);
+                const ema100 = calculateEMA(candlesData, 100);
+                if (emaSeries) {
+                  emaSeries.setData(ema100);
+                }
               }
             } else {
               candlestickSeries.update(candleData);
-              candlesData[candlesData.length - 1] = candleData;
+              const ema100 = calculateEMA(candlesData, 100);
+              if (emaSeries) {
+                emaSeries.setData(ema100);
+              }
             }
+            chart.timeScale().fitContent();
           })
           .catch(err => {
             mostrarError(`Error en polling REST: ${err.message}`);
@@ -1272,19 +1315,21 @@
       currentInterval = nuevoIntervalo;
       klineRetryCount = 0;
       mostrarError("Cargando nuevo intervalo de velas...");
-      // Limpiar datos y gráfico antes de reiniciar
       candlesData = [];
       if (candlestickSeries) {
         candlestickSeries.setData([]);
       }
+      if (emaSeries) {
+        emaSeries.setData([]);
+      }
       initializeChart();
       loadHistoricalKlines().then(() => {
         setupKlineSocket();
-        limpiarError(); // Limpiar el mensaje una vez que se complete
+        limpiarError();
       }).catch((err) => {
         mostrarError(`Error al cambiar intervalo: ${err.message}`);
-        setupKlineSocket(); // Intentar configurar el WebSocket incluso si falla la carga
-        setTimeout(limpiarError, 5000); // Limpiar después de 5 segundos si persiste
+        setupKlineSocket();
+        setTimeout(limpiarError, 5000);
       });
     }
 
