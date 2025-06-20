@@ -3,104 +3,172 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Detalle del Símbolo</title>
+  <title>Libro de Órdenes Mejorado - Futuros Binance</title>
   <style>
+    :root {
+      --bg-color: #1a1a1a;
+      --panel-color: #2f2f2f;
+      --border-color: #444;
+      --text-color: #ffffff;
+      --text-secondary: #cccccc;
+      --ask-color: #ff5555;
+      --bid-color: #55ff55;
+      --highlight-ask: rgba(249, 12, 12, 0.5);
+      --highlight-bid: rgba(0, 255, 0, 0.5);
+      --color-blue: #090ef5;
+      --color-yellow: #e0f30a;
+      --color-orange: #f5550f;
+      --color-purple: #9c27b0;
+    }
+    
     body {
-      background-color: #1a1a1a;
-      color: #ffffff;
-      font-family: Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: 'Segoe UI', Arial, sans-serif;
       margin: 0;
       padding: 20px;
       position: relative;
     }
+    
     .header-controls {
       display: flex;
       justify-content: space-between;
       align-items: center;
       width: 100%;
       padding: 10px;
-      background-color: #2f2f2f;
+      background-color: var(--panel-color);
       border-radius: 5px;
       box-sizing: border-box;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
     }
+    
     .header-left {
       display: flex;
       align-items: center;
       gap: 10px;
-      flex-basis: 40%;
       min-width: 250px;
-    }
-    .search-container {
-      display: flex;
-      align-items: center;
-      gap: 5px;
       flex-grow: 1;
     }
-    .time-stats {
-      flex: 1;
+    
+    .header-center {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 5px;
-      min-width: 0;
+      gap: 0;
+      flex-grow: 1;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
     }
+    
+    .header-info-line {
+      margin: 0;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    
+    .search-container {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .symbol-title {
+      margin-left: 20px;
+      white-space: nowrap;
+    }
+    
     .interval-selector {
-      flex-basis: 20%;
       display: flex;
       align-items: center;
       justify-content: flex-end;
       gap: 5px;
       min-width: 120px;
     }
+    
     .header-controls h1 {
       margin: 0;
-      color: #00ff00;
+      color: var(--bid-color);
       font-size: 20px;
     }
+    
     .time-stats p {
       margin: 0;
-      color: #cccccc;
-      font-size: 12px;
+      color: var(--text-secondary);
+      font-size: 11px;
+      line-height: 1.2;
     }
-    .interval-selector select, .interval-selector button {
-      background-color: #2f2f2f;
-      color: #ffffff;
-      border: 1px solid #444;
-      padding: 5px;
+    
+    .interval-selector select, 
+    .interval-selector button,
+    .search-container input,
+    .liquidity-thresholds input {
+      background-color: var(--panel-color);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      padding: 5px 8px;
       font-size: 12px;
       border-radius: 5px;
       cursor: pointer;
+      transition: all 0.2s ease;
+      width: 80px;
     }
-    .interval-selector button:hover {
-      background-color: #444;
+    
+    .interval-selector select:focus,
+    .search-container input:focus,
+    .liquidity-thresholds input:focus {
+      outline: none;
+      border-color: var(--bid-color);
+      box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.1);
     }
+    
+    .interval-selector button:hover,
+    .liquidity-btn:hover {
+      background-color: var(--border-color);
+    }
+    
     .error-message {
-      color: #ff5555;
+      color: var(--ask-color);
       text-align: center;
       margin: 10px 0;
-      font-size: 14px;
+      font-size: 12px;
     }
+    
+    .loading-message {
+      color: var(--bid-color);
+      text-align: center;
+      margin: 10px 0;
+      font-size: 12px;
+    }
+    
     .chart-container {
       width: 100%;
       height: 500px;
       margin: 20px 0;
-      border: 1px solid #444;
-      background-color: #2f2f2f;
+      border: 1px solid var(--border-color);
+      background-color: var(--panel-color);
+      border-radius: 5px;
+      position: relative;
     }
+    
     .container {
       display: flex;
       gap: 20px;
       justify-content: center;
       flex-wrap: wrap;
     }
+    
     .panel {
       flex: 1;
-      border: 1px solid #444;
-      background-color: #2f2f2f;
+      border: 1px solid var(--border-color);
+      background-color: var(--panel-color);
       padding: 5px 10px 10px 10px;
       min-width: 300px;
+      border-radius: 5px;
+      position: relative;
     }
+    
     .title-row {
       display: flex;
       align-items: center;
@@ -109,216 +177,539 @@
       width: 100%;
       text-align: center;
       margin-top: -5px;
+      margin-bottom: 10px;
     }
+    
     h2 {
       margin: 0;
-      color: #00ff00;
-      font-size: 20px;
-    }
-    .asks-title {
-      color: #ff0000;
-    }
-    .processed-count {
+      color: var(--bid-color);
       font-size: 18px;
+    }
+    
+    .asks-title {
+      color: var(--ask-color);
+    }
+    
+    .processed-count {
+      font-size: 16px;
       font-weight: bold;
     }
+    
     .asks-processed {
-      color: #ff0000;
+      color: var(--ask-color);
     }
+    
     .bids-processed {
-      color: #55ff55;
+      color: var(--bid-color);
     }
+    
     .indicator-circle {
       display: inline-block;
-      width: 12px;
-      height: 12px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
     }
+    
     .indicator-circle-start {
       margin-right: 5px;
     }
+    
     .indicator-circle-end {
       margin-left: 5px;
     }
+    
     .circle-red {
-      background-color: #ff0000 !important;
+      background-color: var(--ask-color) !important;
     }
+    
     .circle-green {
-      background-color: #00ff00 !important;
+      background-color: var(--bid-color) !important;
     }
+    
     table {
       width: 100%;
       border-collapse: collapse;
-      background-color: #2a2a2a;
-      border: 1px solid #444;
+      background-color: var(--panel-color);
+      border: 1px solid var(--border-color);
       margin-bottom: 10px;
       font-size: 12px;
+      border-radius: 5px;
+      overflow: hidden;
     }
+    
     th, td {
-      padding: 4px;
-      border: 1px solid #444;
+      padding: 5px 6px;
+      border: 1px solid var(--border-color);
       position: relative;
       cursor: pointer;
       line-height: 1.2;
+      text-align: center;
     }
+    
     th {
       background-color: #333;
-      color: #00ff00;
+      color: var(--bid-color);
       font-weight: 500;
-      text-align: center;
+      position: sticky;
+      top: 0;
+      font-size: 11px;
     }
+    
     td {
-      text-align: center;
+      color: var(--text-secondary);
       user-select: none;
+      font-size: 11px;
     }
+    
     td span {
       display: inline-block;
       width: 100%;
       text-align: center;
       user-select: text;
     }
+    
     td::selection, td span::selection {
       background: rgba(0, 255, 0, 0.3);
     }
-    .ask-row { color: #cccccc; }
-    .bid-row { color: #cccccc; }
+    
+    .ask-row { color: var(--text-secondary); }
+    .bid-row { color: var(--text-secondary); }
+    
     tr:hover { background-color: #3a3a3a; }
+    
     .highlight-top {
       background-color: rgba(255, 255, 0, 0.2);
-      color: #ffffff;
+      color: var(--text-color);
       font-weight: bold;
     }
+    
     .color-transparent {
       background-color: transparent;
       transition: background-color 0.2s ease-out, color 0.2s ease-out;
     }
+    
     .color-blue {
-      background-color: #090ef5;
+      background-color: var(--color-blue);
       transition: background-color 0.2s ease-out, color 0.2s ease-out;
     }
+    
     .color-blue td {
-      color: #ffffff;
+      color: var(--text-color);
     }
+    
     .color-yellow {
-      background-color: #e0f30a;
+      background-color: var(--color-yellow);
       transition: background-color 0.2s ease-out, color 0.2s ease-out;
     }
+    
     .color-yellow td {
       color: #000000;
     }
+    
     .color-orange {
-      background-color: #f5550f;
+      background-color: var(--color-orange);
       transition: background-color 0.2s ease-out, color 0.2s ease-out;
     }
+    
     .color-orange td {
       color: #000000;
     }
+    
+    .color-purple {
+      background-color: var(--color-purple);
+      transition: background-color 0.2s ease-out, color 0.2s ease-out;
+    }
+    
+    .color-purple td {
+      color: var(--text-color);
+    }
+    
     .bold-row td {
       font-weight: bold;
     }
+    
     .highlight-red {
-      background-color: rgba(249, 12, 12, 0.5) !important;
+      background-color: var(--highlight-ask) !important;
       transition: background-color 1s ease-out;
     }
+    
     .highlight-red td {
-      color: #ffffff !important;
+      color: var(--text-color) !important;
       font-weight: bold;
     }
+    
     tr.highlight-green {
-      background-color: #00ff00 !important;
+      background-color: var(--bid-color) !important;
       transition: background-color 1s ease-out;
     }
+    
     tr.highlight-green td {
       color: #000000 !important;
       font-weight: bold;
     }
+    
     .legend {
       display: flex;
       flex-direction: column;
-      gap: 5px;
-      margin-top: 10px;
+      gap: 3px;
+      margin-top: 8px;
     }
+    
     .legend-row {
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 4px;
       border-radius: 3px;
-      font-size: 10px;
-      background-color: #2f2f2f;
-      color: #cccccc;
-      margin-bottom: 5px;
-      line-height: 1.2;
+      font-size: 9px;
+      background-color: var(--panel-color);
+      color: var(--text-secondary);
+      margin-bottom: 3px;
+      line-height: 1.1;
     }
+    
     .legend .bid-updated-legend {
-      background-color: #00ff00 !important;
+      background-color: var(--bid-color) !important;
       color: #000000 !important;
     }
+    
     .copied {
       background-color: rgba(0, 255, 0, 0.3);
       transition: background-color 0.5s ease;
     }
+    
     .price-cell:hover {
       background-color: rgba(0, 255, 0, 0.1);
       transition: none;
     }
+    
     .highlight-total {
       background-color: #004d00;
-      padding: 2px 4px;
+      padding: 1px 3px;
       border-radius: 3px;
+      font-size: 11px;
     }
+    
     .selected-row {
       background-color: rgba(0, 255, 0, 0.3) !important;
     }
+    
     .selected-column {
-      width: 30px;
+      width: 25px;
       text-align: center;
       position: relative;
     }
+    
     .selected-column:hover {
       background-color: rgba(0, 255, 0, 0.1);
     }
+    
     .selection-checkbox {
       cursor: pointer;
+      accent-color: var(--bid-color);
+      width: 12px;
+      height: 12px;
     }
+    
     .selection-checkbox:active {
-      outline: 2px solid #00ff00;
+      outline: 2px solid var(--bid-color);
     }
+    
     .search-container label {
       margin-right: 5px;
-      font-size: 14px;
+      font-size: 12px;
+      color: var(--text-secondary);
     }
+    
     .search-container input {
-      background-color: #2f2f2f;
-      color: #ffffff;
-      border: 1px solid #444;
-      padding: 5px;
-      font-size: 14px;
+      background-color: var(--panel-color);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      padding: 5px 8px;
+      font-size: 12px;
       border-radius: 5px;
-      width: 150px;
+      width: 120px;
+      transition: all 0.2s ease;
     }
+    
     .search-container input:focus {
       outline: none;
-      border-color: #00ff00;
+      border-color: var(--bid-color);
     }
+    
+    .spinner {
+      border: 2px solid rgba(0, 255, 0, 0.3);
+      border-radius: 50%;
+      border-top: 2px solid var(--bid-color);
+      width: 12px;
+      height: 12px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 5px;
+    }
+    
+    .panel-alert {
+      position: absolute;
+      top: 5px;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 2px 5px;
+      border-radius: 3px;
+      animation: flash 1s ease-in-out;
+      z-index: 100;
+    }
+    
+    .ask-alert {
+      right: 10px;
+      color: var(--ask-color);
+      background-color: rgba(255, 85, 85, 0.2);
+    }
+    
+    .bid-alert {
+      left: 10px;
+      color: var(--bid-color);
+      background-color: rgba(85, 255, 85, 0.2);
+    }
+    
+    .liquidity-controls {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding: 5px;
+      background-color: var(--panel-color);
+      border-radius: 5px;
+    }
+    
+    .liquidity-thresholds {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+    
+    .liquidity-btn {
+      background-color: var(--panel-color);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      padding: 5px 8px;
+      font-size: 12px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    
+    /* Contenedor principal de estadísticas */
+    .market-stats-container {
+      background-color: var(--panel-color);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .stats-panel h3 {
+      margin: 0 0 10px 0;
+      color: var(--text-color);
+      font-size: 14px;
+      text-align: center;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 12px;
+    }
+
+    .stats-column {
+      padding: 8px;
+      border-radius: 6px;
+    }
+
+    .bid-stats {
+      background-color: rgba(85, 255, 85, 0.1);
+      border-left: 3px solid var(--bid-color);
+    }
+
+    .ask-stats {
+      background-color: rgba(255, 85, 85, 0.1);
+      border-left: 3px solid var(--ask-color);
+    }
+
+    .spread-stats {
+      background-color: rgba(255, 255, 0, 0.1);
+      border-left: 3px solid #ffff00;
+    }
+
+    /* Barra de desequilibrio mejorada */
+    .imbalance-container {
+      margin-top: 15px;
+      padding: 10px;
+      background-color: rgba(0,0,0,0.2);
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .imbalance-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-right: 8px;
+    }
+
+    .imbalance-value {
+      font-weight: bold;
+      font-size: 13px;
+    }
+
+    .imbalance-bar {
+      height: 12px;
+      background: linear-gradient(to right, var(--ask-color), var(--bid-color));
+      border-radius: 6px;
+      margin-top: 8px;
+      position: relative;
+    }
+
+    .imbalance-indicator {
+      position: absolute;
+      height: 16px;
+      width: 3px;
+      background-color: white;
+      top: -2px;
+      transform: translateX(-50%);
+      border-radius: 2px;
+    }
+
+    /* Alertas */
+    .alert-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      max-width: 300px;
+      z-index: 1000;
+    }
+
+    .market-alert {
+      padding: 8px 12px;
+      margin: 5px 0;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      animation: fadeIn 0.3s ease;
+      font-size: 12px;
+      background-color: var(--panel-color);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .alert-time {
+      color: var(--text-secondary);
+      font-size: 10px;
+      margin-right: 8px;
+    }
+
+    .alert-message {
+      flex-grow: 1;
+    }
+
+    .alert-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 14px;
+      margin-left: 8px;
+    }
+
+    .spread-alert {
+      border-left: 3px solid orange;
+    }
+
+    .imbalance-alert {
+      border-left: 3px solid mediumpurple;
+    }
+
+    .volume-alert {
+      border-left: 3px solid deepskyblue;
+    }
+
+    /* Controles de liquidez en estadísticas */
+    .liquidity-controls-stats {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+      padding: 10px;
+      background-color: rgba(0,0,0,0.2);
+      border-radius: 6px;
+    }
+
+    .liquidity-thresholds-stats {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Responsive */
     @media (max-width: 768px) {
       .header-controls {
         flex-direction: column;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
       }
-      .header-left, .time-stats, .interval-selector {
-        flex-basis: auto;
+      
+      .header-left, .header-center, .interval-selector {
         width: 100%;
         justify-content: center;
         text-align: center;
       }
+      
       .search-container {
         width: 100%;
       }
+      
       .search-container input {
         width: 80%;
       }
+      
+      .panel {
+        min-width: 100%;
+      }
+      
+      .symbol-title {
+        margin-left: 0;
+        margin-top: 8px;
+      }
+      
+      .liquidity-controls {
+        flex-direction: column;
+        gap: 5px;
+      }
+      
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .alert-container {
+        bottom: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+      }
+    }
+
+    @keyframes flash {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   </style>
   <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
@@ -328,38 +719,119 @@
     <div class="header-left">
       <div class="search-container">
         <label for="symbol-search">Buscar par USDT:</label>
-        <input type="text" id="symbol-search" placeholder="Ejemplo: BTCUSDT" list="symbol-list" autocomplete="off" onmouseover="this.value=''">
+        <input type="text" id="symbol-search" placeholder="Ejemplo: BTCUSDT" list="symbol-list" autocomplete="off" aria-label="Buscar par de trading">
         <datalist id="symbol-list"></datalist>
       </div>
-      <h1 id="symbol-title"></h1>
+      <h1 class="symbol-title" id="symbol-title"></h1>
     </div>
-    <div class="time-stats">
-      <p id="local-time"></p>
-      <p>Total prices processed: <span id="total-prices">0</span></p>
-      <p id="ws-status">WebSocket: Desconectado</p>
+    
+    <div class="header-center">
+      <p class="header-info-line" id="compact-timestamp"></p>
+      <p class="header-info-line">Órdenes procesadas: <span id="total-prices">0</span></p>
+      <p class="header-info-line" id="ws-status">WebSocket: Conectando... <span class="spinner"></span></p>
     </div>
+    
     <div class="interval-selector">
       <label for="interval-select">Intervalo: </label>
-      <select id="interval-select" onchange="cambiarIntervaloVelas()">
-        <option value="15m">15 minutos</option>
-        <option value="1h" selected>1 hora</option>
-        <option value="4h">4 horas</option>
-        <option value="1d">1 día</option>
+      <select id="interval-select" aria-label="Seleccionar intervalo de velas">
+        <option value="15m">15m</option>
+        <option value="1h" selected>1h</option>
+        <option value="4h">4h</option>
+        <option value="1d">1d</option>
       </select>
-      <button onclick="autoScaleChart()">Auto Scale</button>
+      <button onclick="autoScaleChart()" aria-label="Autoajustar gráfico">Auto Scale</button>
     </div>
   </div>
-  <div class="chart-container" id="chart-container"></div>
+  
+  <div class="chart-container" id="chart-container">
+    <div class="loading-message">Cargando gráfico... <span class="spinner"></span></div>
+  </div>
+  
   <div id="error-message" class="error-message"></div>
+  
+  <!-- Nuevo contenedor de estadísticas de mercado -->
+  <div class="market-stats-container">
+    <div class="stats-panel">
+      <h3>Estadísticas de Mercado</h3>
+      <div class="stats-grid">
+        <!-- Columna Asks (izquierda) -->
+        <div class="stats-column ask-stats">
+          <div class="stats-row">
+            <span class="stats-label">Liquidez Asks:</span>
+            <span class="stats-value" id="total-ask-liquidity">0</span>
+          </div>
+          <div class="stats-row">
+            <span class="stats-label">Órdenes grandes:</span>
+            <span class="stats-value" id="large-asks-count">0</span>
+          </div>
+        </div>
+        
+        <!-- Columna Spread -->
+        <div class="stats-column spread-stats">
+          <div class="stats-row">
+            <span class="stats-label">Spread:</span>
+            <span class="stats-value" id="market-spread">0</span>
+          </div>
+          <div class="stats-row">
+            <span class="stats-label">Best Bid/Ask:</span>
+            <span class="stats-value" id="best-bid-ask">0 / 0</span>
+          </div>
+        </div>
+        
+        <!-- Columna Bids (derecha) -->
+        <div class="stats-column bid-stats">
+          <div class="stats-row">
+            <span class="stats-label">Liquidez Bids:</span>
+            <span class="stats-value" id="total-bid-liquidity">0</span>
+          </div>
+          <div class="stats-row">
+            <span class="stats-label">Órdenes grandes:</span>
+            <span class="stats-value" id="large-bids-count">0</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Barra de desequilibrio mejorada -->
+      <div class="imbalance-container">
+        <span class="imbalance-label">Desequilibrio:</span>
+        <span class="imbalance-value" id="orderbook-imbalance">0%</span>
+        <div class="imbalance-bar">
+          <div class="imbalance-indicator" id="imbalance-indicator"></div>
+        </div>
+      </div>
+      
+      <!-- Controles de liquidez en la sección de estadísticas -->
+      <div class="liquidity-controls-stats">
+        <div class="liquidity-thresholds-stats">
+          <label>Umbral:</label>
+          <input type="number" id="large-threshold" value="50000000" step="1000000">
+          <label>Muy grande:</label>
+          <input type="number" id="very-large-threshold" value="100000000" step="1000000">
+          <button class="liquidity-btn" onclick="updateThresholds()">Aplicar</button>
+        </div>
+        <div>
+          <button class="liquidity-btn" onclick="toggleSoundAlerts()" id="sound-toggle">🔊 Sonido: ON</button>
+          <button class="liquidity-btn" onclick="showLiquidityClusters()">Mostrar Clusters</button>
+          <button class="liquidity-btn" onclick="toggleLiquidityHeatmap()">Heatmap</button>
+          <button class="liquidity-btn" onclick="saveKeyLevels()">Guardar Niveles</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Contenedor de alertas -->
+  <div id="alert-container" class="alert-container"></div>
+  
   <div class="container">
     <div class="panel">
       <div class="title-row">
         <span class="indicator-circle indicator-circle-start" id="asks-indicator-start"></span>
-        <h2 class="asks-title">Top Asks:</h2>
+        <h2 class="asks-title">Top Asks (Futuros)</h2>
         <span class="processed-count asks-processed" id="asks-processed">0</span>
         <span class="indicator-circle indicator-circle-end" id="asks-indicator-end"></span>
       </div>
-      <table>
+      
+      <table aria-label="Órdenes de venta">
         <thead>
           <tr>
             <th>#</th>
@@ -367,28 +839,32 @@
             <th>Price</th>
             <th>Qty</th>
             <th>Usdt</th>
-            <th>% 2 price</th>
+            <th>% Mark</th>
             <th>Hits</th>
-            <th class="selected-column">Select</th>
+            <th class="selected-column">Sel</th>
           </tr>
         </thead>
-        <tbody id="asks-body"></tbody>
+        <tbody id="asks-body" aria-live="polite" aria-atomic="false"></tbody>
       </table>
+      
       <div class="legend">
-        <div class="legend-row" style="background-color: rgba(249, 12, 12, 0.5) !important; color: #ffffff !important;">Ask updated (Sell, White Text)</div>
-        <div class="legend-row" style="background-color: #090ef5 !important; color: #ffffff !important;">Asks Within 0.5% to 1% of markPrice (White Text)</div>
-        <div class="legend-row" style="background-color: #e0f30a !important; color: #000000 !important;">Asks Within 0.1% to 0.5% of markPrice (Black Text)</div>
-        <div class="legend-row" style="background-color: #f5550f !important; color: #000000 !important;">Asks Within 0.1% of markPrice (Black Text)</div>
+        <div class="legend-row" style="background-color: var(--highlight-ask) !important; color: var(--text-color) !important;">Ask actualizado (Venta)</div>
+        <div class="legend-row" style="background-color: var(--color-blue) !important; color: var(--text-color) !important;">Asks 0.5%-1% del markPrice</div>
+        <div class="legend-row" style="background-color: var(--color-yellow) !important; color: #000000 !important;">Asks 0.1%-0.5% del markPrice</div>
+        <div class="legend-row" style="background-color: var(--color-orange) !important; color: #000000 !important;">Asks &lt;0.1% del markPrice</div>
+        <div class="legend-row" style="background-color: var(--color-purple) !important; color: var(--text-color) !important;">Órdenes institucionales</div>
       </div>
     </div>
+    
     <div class="panel">
       <div class="title-row">
         <span class="indicator-circle indicator-circle-start" id="bids-indicator-start"></span>
-        <h2>Top Bids:</h2>
+        <h2>Top Bids (Futuros)</h2>
         <span class="processed-count bids-processed" id="bids-processed">0</span>
         <span class="indicator-circle indicator-circle-end" id="bids-indicator-end"></span>
       </div>
-      <table>
+      
+      <table aria-label="Órdenes de compra">
         <thead>
           <tr>
             <th>#</th>
@@ -396,620 +872,1082 @@
             <th>Price</th>
             <th>Qty</th>
             <th>Usdt</th>
-            <th>% 2 price</th>
+            <th>% Mark</th>
             <th>Hits</th>
-            <th class="selected-column">Select</th>
+            <th class="selected-column">Sel</th>
           </tr>
         </thead>
-        <tbody id="bids-body"></tbody>
+        <tbody id="bids-body" aria-live="polite" aria-atomic="false"></tbody>
       </table>
+      
       <div class="legend">
-        <div class="legend-row bid-updated-legend" style="background-color: #00ff00 !important; color: #000000 !important;">Bid updated (Buy, Black Text)</div>
-        <div class="legend-row" style="background-color: #090ef5 !important; color: #ffffff !important;">Bids Within 0.5% to 1% of markPrice (White Text)</div>
-        <div class="legend-row" style="background-color: #e0f30a !important; color: #000000 !important;">Bids Within 0.1% to 0.5% of markPrice (Black Text)</div>
-        <div class="legend-row" style="background-color: #f5550f !important; color: #000000 !important;">Bids Within 0.1% of markPrice (Black Text)</div>
+        <div class="legend-row bid-updated-legend" style="background-color: var(--bid-color) !important; color: #000000 !important;">Bid actualizado (Compra)</div>
+        <div class="legend-row" style="background-color: var(--color-blue) !important; color: var(--text-color) !important;">Bids 0.5%-1% del markPrice</div>
+        <div class="legend-row" style="background-color: var(--color-yellow) !important; color: #000000 !important;">Bids 0.1%-0.5% del markPrice</div>
+        <div class="legend-row" style="background-color: var(--color-orange) !important; color: #000000 !important;">Bids &lt;0.1% del markPrice</div>
+        <div class="legend-row" style="background-color: var(--color-purple) !important; color: var(--text-color) !important;">Órdenes institucionales</div>
       </div>
     </div>
   </div>
+
   <script>
+    // Configuración inicial
     const params = new URLSearchParams(window.location.search);
     const symbol = params.get("symbol") || "BTCUSDT";
     document.getElementById("symbol-title").innerText = `${symbol}: 0.0000 USDT`;
-    const tickerWsUrl = `wss://stream.binance.com:443/ws/!miniTicker@arr`;
-    const spotWsUrl = `wss://stream.binance.com:443/ws/${symbol.toLowerCase()}@depth@100ms`;
+    
+    // URLs de WebSocket
     const futuresWsUrl = `wss://fstream.binance.com/ws/${symbol.toLowerCase()}@depth@100ms`;
     const futuresMarkPriceWsUrl = `wss://fstream.binance.com/ws/${symbol.toLowerCase()}@markPrice@1s`;
-    let klineWs = null;
-    let wsConnectionCount = 0;
-    let markPriceSpot = 0;
+    const tickerWsUrl = `wss://fstream.binance.com/ws/${symbol.toLowerCase()}@ticker`;
+    
+    // Variables de estado
     let markPriceFutures = 0;
-    let spotAsksData = [];
-    let spotBidsData = [];
+    let lastPriceUpdate = 0;
     let futuresAsksData = [];
     let futuresBidsData = [];
-    let spotAsksProcessed = 0;
-    let spotBidsProcessed = 0;
-    let futuresAsksProcessed = 0;
-    let futuresBidsProcessed = 0;
     let asksProcessed = 0;
     let bidsProcessed = 0;
     let pendingUpdate = false;
+    let updatePaused = false;
     let isInteracting = false;
     const rowColors = new Map();
     const COLOR_DURATION_MS = 5000;
-    let selectedPrices = new Map(); // {precio: {series, isAsk}}
-    for (let key in localStorage) {
-      if (key.startsWith('selectedPrices_') && key !== `selectedPrices_${symbol}`) {
-        console.log(`Eliminando ${key}`);
-        localStorage.removeItem(key);
-      }
-    }
-    const savedPrices = JSON.parse(localStorage.getItem(`selectedPrices_${symbol}`) || '[]');
-    savedPrices.forEach(price => selectedPrices.set(price, { series: null, isAsk: false }));
-    let currentInterval = '1h';
+    let selectedPrices = new Map();
+    let currentInterval = localStorage.getItem('chartInterval') || '1h';
+    document.getElementById('interval-select').value = currentInterval;
     let asksPriceMap = new Map();
     let bidsPriceMap = new Map();
-    let klineRetryCount = 0;
-    const MAX_RETRIES = 2;
-    let reconnectTimeout = null;
-    const errorMessageElement = document.getElementById("error-message");
     let chart = null;
     let candlestickSeries = null;
     let emaSeries = null;
     let candlesData = [];
-
-    function mostrarError(mensaje) {
-      errorMessageElement.textContent = mensaje;
-      console.error(mensaje);
+    let lastChartUpdate = 0;
+    const CHART_UPDATE_INTERVAL = 1000;
+    let klineSocket = null;
+    let lastCandle = null;
+    let lastAlertElement = null;
+    let LARGE_ORDER_THRESHOLD = 50000000; // 50 millones USDT
+    let VERY_LARGE_ORDER_THRESHOLD = 100000000; // 100 millones USDT
+    let liquidityHistory = [];
+    const MAX_HISTORY = 100;
+    let heatmapEnabled = false;
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 5;
+    
+    // Configuración de alertas
+    const ALERT_SETTINGS = {
+      spreadAlert: 0.5, // % para considerar spread alto
+      imbalanceAlert: 30, // % de desequilibrio para alerta
+      volumeAlert: 100000000, // 100M USDT para alerta de volumen
+      soundEnabled: true
+    };
+    
+    // Elementos del DOM
+    const errorMessageElement = document.getElementById("error-message");
+    
+    // Cargar precios seleccionados desde localStorage
+    function loadSelectedPrices() {
+      const savedPrices = JSON.parse(localStorage.getItem(`selectedPrices_${symbol}`) || '[]');
+      selectedPrices.clear();
+      savedPrices.forEach(price => selectedPrices.set(price, { series: null, isAsk: false }));
     }
-
-    function limpiarError() {
-      errorMessageElement.textContent = "";
+    
+    // Inicializar WebSockets con manejo de reconexión
+    function initializeWebSockets() {
+      initializeTickerSocket();
+      initializeMarkPriceSocket();
+      initializeDepthSocket();
+      initializeChart();
+      initializeKlineSocket();
     }
-
-    function guardarPreciosSeleccionados() {
-      const prices = Array.from(selectedPrices.keys());
-      localStorage.setItem(`selectedPrices_${symbol}`, JSON.stringify(prices));
+    
+    // WebSocket para ticker (precio actual)
+    function initializeTickerSocket() {
+      const socket = new WebSocket(tickerWsUrl);
+      
+      socket.onopen = () => {
+        updateWsStatus(`WebSocket: Conectado (Ticker)`);
+      };
+      
+      socket.onerror = (error) => {
+        showError(`Error en Ticker WebSocket: ${error.message || 'Desconocido'}`);
+      };
+      
+      socket.onclose = () => {
+        updateWsStatus("WebSocket: Reconectando (Ticker)...");
+        setTimeout(initializeTickerSocket, 3000);
+      };
+      
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const now = Date.now();
+          
+          if (data.c) {
+            const newPrice = parseFloat(data.c);
+            markPriceFutures = newPrice;
+            lastPriceUpdate = now;
+            document.getElementById("symbol-title").innerText = `${symbol}: ${formatPrice(markPriceFutures)} USDT`;
+            updateTimestamp();
+            scheduleTableUpdate();
+            updateMarketSpread();
+          }
+        } catch (err) {
+          showError(`Error al procesar mensaje de Ticker: ${err.message}`);
+        }
+      };
     }
-
-    function configurarEventos() {
-      document.querySelectorAll('#asks-body, #bids-body').forEach(tableBody => {
-        tableBody.addEventListener('mouseover', (event) => {
-          if (event.target.closest('.price-cell') || event.target.closest('.selected-column')) {
-            console.log('Hover en select/precio, isInteracting = true');
-            isInteracting = true;
+    
+    // WebSocket para mark price
+    function initializeMarkPriceSocket() {
+      const socket = new WebSocket(futuresMarkPriceWsUrl);
+      
+      socket.onopen = () => {
+        updateWsStatus(`WebSocket: Conectado (Mark Price)`);
+      };
+      
+      socket.onerror = (error) => {
+        showError(`Error en Mark Price WebSocket: ${error.message || 'Desconocido'}`);
+      };
+      
+      socket.onclose = () => {
+        updateWsStatus("WebSocket: Reconectando (Mark Price)...");
+        setTimeout(initializeMarkPriceSocket, 3000);
+      };
+      
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.s === symbol.toUpperCase()) {
+            markPriceFutures = parseFloat(data.p);
+            lastPriceUpdate = Date.now();
+            document.getElementById("symbol-title").innerText = `${symbol}: ${formatPrice(markPriceFutures)} USDT`;
+            updateMarketSpread();
           }
-        });
-        tableBody.addEventListener('mouseout', (event) => {
-          if (event.target.closest('.price-cell') || event.target.closest('.selected-column')) {
-            setTimeout(() => {
-              console.log('Mouse out, isInteracting = false');
-              isInteracting = false;
-            }, 500);
-          }
-        });
-        tableBody.addEventListener('mousedown', (event) => {
-          const priceCell = event.target.closest('.price-cell');
-          if (priceCell) {
-            isInteracting = true;
-            manejarSeleccion(event);
-          }
-        });
-        tableBody.addEventListener('click', (event) => {
-          const priceCell = event.target.closest('.price-cell');
-          if (priceCell) {
-            copiarCeldaPrecio(event);
-          }
-        });
-      });
+        } catch (err) {
+          showError(`Error al procesar mensaje de Mark Price: ${err.message}`);
+        }
+      };
     }
-
-    const tickerSocket = new WebSocket(tickerWsUrl);
-    tickerSocket.onopen = () => {
-      wsConnectionCount++;
-      console.log(`Ticker WebSocket conectado (Conexiones: ${wsConnectionCount})`);
-      document.getElementById("ws-status").textContent = "WebSocket: Conectado (Ticker)";
-    };
-    tickerSocket.onerror = (error) => {
-      mostrarError(`Error en Ticker WebSocket: ${JSON.stringify(error)}`);
-    };
-    tickerSocket.onclose = () => {
-      wsConnectionCount = Math.max(0, wsConnectionCount - 1);
-      mostrarError("Ticker WebSocket cerrado. Reconectando...");
-      document.getElementById("ws-status").textContent = "WebSocket: Desconectado (Ticker)";
-      setTimeout(() => {
-        tickerSocket = new WebSocket(tickerWsUrl);
-      }, 3000);
-    };
-    tickerSocket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        const symbolData = data.find(item => item.s === symbol.toUpperCase());
-        if (symbolData) {
-          const newPrice = parseFloat(symbolData.c);
-          markPriceSpot = newPrice;
-          document.getElementById("symbol-title").innerText = `${symbol}: ${formatearPrecio(markPriceSpot)} USDT`;
-          actualizarTimestamp();
-          programarActualizacionTabla();
-          if (!candlesData.length) {
-            initializeChart();
-            loadHistoricalKlines();
+    
+    // WebSocket para depth (libro de órdenes)
+    function initializeDepthSocket() {
+      const socket = new WebSocket(futuresWsUrl);
+      
+      socket.onopen = () => {
+        updateWsStatus(`WebSocket: Conectado (Depth)`);
+      };
+      
+      socket.onerror = (error) => {
+        showError(`Error en Depth WebSocket: ${error.message || 'Desconocido'}`);
+      };
+      
+      socket.onclose = () => {
+        updateWsStatus("WebSocket: Reconectando (Depth)...");
+        setTimeout(initializeDepthSocket, 3000);
+      };
+      
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const now = Date.now();
+          
+          if (data.a && Array.isArray(data.a)) {
+            futuresAsksData = updateOrders(futuresAsksData, data.a, now, true);
+            asksProcessed += data.a.length;
+            
+            // Verificar órdenes institucionales en asks
+            data.a.forEach(([p, q]) => {
+              const price = parseFloat(p);
+              const quantity = parseFloat(q);
+              const usdtValue = price * quantity;
+              
+              if (usdtValue >= VERY_LARGE_ORDER_THRESHOLD) {
+                showOrderAlert('ask', usdtValue, true);
+              } else if (usdtValue >= LARGE_ORDER_THRESHOLD) {
+                showOrderAlert('ask', usdtValue, false);
+              }
+            });
           }
+          
+          if (data.b && Array.isArray(data.b)) {
+            futuresBidsData = updateOrders(futuresBidsData, data.b, now, false);
+            bidsProcessed += data.b.length;
+            
+            // Verificar órdenes institucionales en bids
+            data.b.forEach(([p, q]) => {
+              const price = parseFloat(p);
+              const quantity = parseFloat(q);
+              const usdtValue = price * quantity;
+              
+              if (usdtValue >= VERY_LARGE_ORDER_THRESHOLD) {
+                showOrderAlert('bid', usdtValue, true);
+              } else if (usdtValue >= LARGE_ORDER_THRESHOLD) {
+                showOrderAlert('bid', usdtValue, false);
+              }
+            });
+          }
+          
+          updateProcessedCounters();
+          updateLiquidityStats();
+          updateOrderBookImbalance();
+          trackLiquidityChanges();
+        } catch (err) {
+          showError(`Error al procesar mensaje de Depth: ${err.message}`);
         }
-      } catch (err) {
-        mostrarError(`Error al procesar mensaje de Ticker: ${err.message}`);
+      };
+    }
+    
+    // WebSocket para velas en tiempo real
+    function initializeKlineSocket() {
+      if (klineSocket) {
+        klineSocket.close();
       }
-    };
-
-    const futuresMarkPriceSocket = new WebSocket(futuresMarkPriceWsUrl);
-    futuresMarkPriceSocket.onopen = () => {
-      wsConnectionCount++;
-      console.log(`Futures Mark Price WebSocket conectado (Conexiones: ${wsConnectionCount})`);
-    };
-    futuresMarkPriceSocket.onerror = (error) => {
-      mostrarError(`Error en Futures Mark Price WebSocket: ${JSON.stringify(error)}`);
-    };
-    futuresMarkPriceSocket.onclose = () => {
-      wsConnectionCount = Math.max(0, wsConnectionCount - 1);
-      mostrarError("Futures Mark Price WebSocket cerrado. Reconectando...");
+      
+      klineSocket = new WebSocket(`wss://fstream.binance.com/ws/${symbol.toLowerCase()}@kline_${currentInterval}`);
+      
+      klineSocket.onopen = () => {
+        updateWsStatus(`WebSocket: Conectado (Kline)`);
+        reconnectAttempts = 0; // Resetear contador de reconexión
+        loadHistoricalKlines();
+      };
+      
+      klineSocket.onerror = (error) => {
+        showError(`Error en Kline WebSocket: ${error.message || 'Desconocido'}`);
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+          setTimeout(initializeKlineSocket, delay);
+          reconnectAttempts++;
+        } else {
+          showError("Maximo de reconexiones alcanzado. Recargue la página.");
+        }
+      };
+      
+      klineSocket.onclose = () => {
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          updateWsStatus("WebSocket: Reconectando (Kline)...");
+          setTimeout(initializeKlineSocket, 3000);
+          reconnectAttempts++;
+        }
+      };
+      
+      klineSocket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const kline = data.k;
+          
+          const newCandle = {
+            time: Math.floor(kline.t / 1000),
+            open: parseFloat(kline.o),
+            high: parseFloat(kline.h),
+            low: parseFloat(kline.l),
+            close: parseFloat(kline.c)
+          };
+          
+          if (kline.x) { // Vela cerrada
+            if (candlesData.length > 0 && candlesData[candlesData.length - 1].time === newCandle.time) {
+              candlesData[candlesData.length - 1] = newCandle;
+            } else {
+              candlesData.push(newCandle);
+              if (candlesData.length > 150) candlesData.shift();
+            }
+            lastCandle = newCandle;
+          } else { // Vela en progreso
+            if (candlesData.length > 0 && candlesData[candlesData.length - 1].time === newCandle.time) {
+              candlesData[candlesData.length - 1] = newCandle;
+            } else if (candlesData.length === 0 || newCandle.time > candlesData[candlesData.length - 1].time) {
+              candlesData.push(newCandle);
+              if (candlesData.length > 150) candlesData.shift();
+            }
+          }
+          
+          if (candlestickSeries) {
+            candlestickSeries.setData(candlesData);
+            const ema100 = calculateEMA(candlesData, 100);
+            if (emaSeries) emaSeries.setData(ema100);
+          }
+        } catch (err) {
+          showError(`Error al procesar mensaje de Kline: ${err.message}`);
+        }
+      };
+    }
+    
+    // Mostrar alerta visual para órdenes institucionales
+    function showOrderAlert(type, value, isVeryLarge) {
+      // Crear elemento de alerta en el panel
+      const panelTitle = document.querySelector(`.${type}s-title`);
+      if (!panelTitle) return;
+      
+      const panel = panelTitle.closest('.panel');
+      if (!panel) return;
+      
+      const alertElement = document.createElement('div');
+      alertElement.className = `panel-alert ${type}-alert`;
+      alertElement.textContent = `${type === 'ask' ? 'SELL' : 'BUY'}: ${formatUsdt(value)}`;
+      
+      panel.appendChild(alertElement);
+      
+      // Eliminar alerta anterior si existe
+      if (lastAlertElement && lastAlertElement.parentNode) {
+        lastAlertElement.remove();
+      }
+      
+      lastAlertElement = alertElement;
+      
+      // Reproducir sonido si está habilitado
+      if (ALERT_SETTINGS.soundEnabled) {
+        playAlertSound(isVeryLarge ? 'volume' : 'default');
+      }
+      
+      // Eliminar después de 5 segundos
       setTimeout(() => {
-        futuresMarkPriceSocket = new WebSocket(futuresMarkPriceWsUrl);
-      }, 3000);
-    };
-    futuresMarkPriceSocket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        markPriceFutures = parseFloat(data.p);
-      } catch (err) {
-        mostrarError(`Error al procesar mensaje de Futures Mark Price: ${err.message}`);
+        if (alertElement && alertElement.parentNode) {
+          alertElement.remove();
+        }
+      }, 5000);
+      
+      // Añadir alerta al gráfico si es muy grande (>100M)
+      if (isVeryLarge && chart) {
+        const price = type === 'ask' 
+          ? futuresAsksData.find(a => a.usdt === value)?.price 
+          : futuresBidsData.find(b => b.usdt === value)?.price;
+        
+        if (price) {
+          addChartAlertMarker(price, type, value);
+        }
       }
-    };
-
-    const spotDepthSocket = new WebSocket(spotWsUrl);
-    spotDepthSocket.onopen = () => {
-      wsConnectionCount++;
-      console.log(`Spot Depth WebSocket conectado (Conexiones: ${wsConnectionCount})`);
-    };
-    spotDepthSocket.onerror = (error) => {
-      mostrarError(`Error en Spot Depth WebSocket: ${JSON.stringify(error)}`);
-    };
-    spotDepthSocket.onclose = () => {
-      wsConnectionCount = Math.max(0, wsConnectionCount - 1);
-      mostrarError("Spot Depth WebSocket cerrado. Reconectando...");
+    }
+    
+    // Añadir marcador de alerta al gráfico
+    function addChartAlertMarker(price, type, value) {
+      if (!candlestickSeries) return;
+      
+      const now = Math.floor(Date.now() / 1000);
+      const marker = {
+        time: now,
+        position: type === 'ask' ? 'belowBar' : 'aboveBar',
+        color: type === 'ask' ? '#ff0000' : '#00ff00',
+        shape: type === 'ask' ? 'arrowDown' : 'arrowUp',
+        text: `${type.toUpperCase()}: $${formatUsdt(value)}`,
+        size: 2
+      };
+      
+      candlestickSeries.setMarkers([marker]);
+      
+      // Eliminar el marcador después de 30 segundos
       setTimeout(() => {
-        spotDepthSocket = new WebSocket(spotWsUrl);
-      }, 3000);
-    };
-    spotDepthSocket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log(`Spot Depth recibido: ${JSON.stringify(data)}`);
-        const now = Date.now();
-        if (data.a && Array.isArray(data.a)) {
-          spotAsksData = actualizarOrdenes(spotAsksData, data.a, now, true, 'spot');
-          spotAsksProcessed += data.a.length;
+        candlestickSeries.setMarkers([]);
+      }, 30000);
+    }
+    
+    // Actualizar órdenes con nuevos datos
+    function updateOrders(existingOrders, newOrders, now, isAsk) {
+      const orderMap = new Map(existingOrders.map(o => [o.price, o]));
+      
+      newOrders.forEach(([p, q]) => {
+        const price = parseFloat(p);
+        const quantity = parseFloat(q);
+        const usdtValue = price * quantity;
+        
+        if (quantity === 0) {
+          orderMap.delete(price);
+          rowColors.delete(price);
         } else {
-          console.warn(`Datos de asks inválidos en Spot Depth: ${JSON.stringify(data.a)}`);
-        }
-        if (data.b && Array.isArray(data.b)) {
-          spotBidsData = actualizarOrdenes(spotBidsData, data.b, now, false, 'spot');
-          spotBidsProcessed += data.b.length;
-        } else {
-          console.warn(`Datos de bids inválidos en Spot Depth: ${JSON.stringify(data.b)}`);
-        }
-        actualizarContadoresProcesados();
-      } catch (err) {
-        mostrarError(`Error al procesar mensaje de Spot Depth: ${err.message}`);
-      }
-    };
-
-    const futuresDepthSocket = new WebSocket(futuresWsUrl);
-    futuresDepthSocket.onopen = () => {
-      wsConnectionCount++;
-      console.log(`Futures Depth WebSocket conectado (Conexiones: ${wsConnectionCount})`);
-    };
-    futuresDepthSocket.onerror = (error) => {
-      mostrarError(`Error en Futures Depth WebSocket: ${JSON.stringify(error)}`);
-    };
-    futuresDepthSocket.onclose = () => {
-      wsConnectionCount = Math.max(0, wsConnectionCount - 1);
-      mostrarError("Futures Depth WebSocket cerrado. Reconectando...");
-      setTimeout(() => {
-        futuresDepthSocket = new WebSocket(futuresWsUrl);
-      }, 3000);
-    };
-    futuresDepthSocket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log(`Futures Depth recibido: ${JSON.stringify(data)}`);
-        const now = Date.now();
-        if (data.a && Array.isArray(data.a)) {
-          futuresAsksData = actualizarOrdenes(futuresAsksData, data.a, now, true, 'futures');
-          futuresAsksProcessed += data.a.length;
-        } else {
-          console.warn(`Datos de asks inválidos en Futures Depth: ${JSON.stringify(data.a)}`);
-        }
-        if (data.b && Array.isArray(data.b)) {
-          futuresBidsData = actualizarOrdenes(futuresBidsData, data.b, now, false, 'futures');
-          futuresBidsProcessed += data.b.length;
-        } else {
-          console.warn(`Datos de bids inválidos en Futures Depth: ${JSON.stringify(data.b)}`);
-        }
-        actualizarContadoresProcesados();
-      } catch (err) {
-        mostrarError(`Error al procesar mensaje de Futures Depth: ${err.message}`);
-      }
-    };
-
-    function actualizarOrdenes(ordenesExistentes, nuevasOrdenes, ahora, esAsk, mercado) {
-      const mapaOrdenes = new Map(ordenesExistentes.map(o => [o.price, o]));
-      nuevasOrdenes.forEach(([p, q]) => {
-        const precio = parseFloat(p);
-        const cantidad = parseFloat(q);
-        const usdt = precio * cantidad;
-        if (cantidad === 0) {
-          mapaOrdenes.delete(precio);
-          rowColors.delete(precio);
-        } else {
-          if (mapaOrdenes.has(precio)) {
-            const existente = mapaOrdenes.get(precio);
-            const hitsAnteriores = existente.hits || 0;
-            existente.qty = cantidad;
-            existente.usdt = usdt;
-            existente.lastUpdated = ahora;
-            existente.hits = hitsAnteriores + 1;
-            existente.colorAssignedTime = ahora;
-            existente.market = mercado;
+          const existingOrder = orderMap.get(price);
+          
+          if (existingOrder) {
+            existingOrder.qty = quantity;
+            existingOrder.usdt = usdtValue;
+            existingOrder.lastUpdated = now;
+            existingOrder.hits = (existingOrder.hits || 0) + 1;
+            existingOrder.colorAssignedTime = now;
           } else {
-            mapaOrdenes.set(precio, {
-              price: precio,
-              qty: cantidad,
-              usdt,
-              lastUpdated: ahora,
-              colorAssignedTime: ahora,
-              hits: 1,
-              market: mercado
+            orderMap.set(price, {
+              price: price,
+              qty: quantity,
+              usdt: usdtValue,
+              lastUpdated: now,
+              colorAssignedTime: now,
+              hits: 1
             });
           }
         }
       });
-      return Array.from(mapaOrdenes.values());
-    }
-
-    function combinarOrdenes(ordenesSpot, ordenesFutures, precioSpot, precioFutures, esAsk) {
-      const mapaCombinado = new Map();
-      [...ordenesSpot, ...ordenesFutures].forEach(orden => {
-        const precio = orden.price;
-        const mercado = orden.market;
-        const precioReferencia = mercado === 'spot' ? precioSpot : precioFutures;
-        const diferencia = precioReferencia ? Math.abs((precio - precioReferencia) / precioReferencia) * 100 : Infinity;
-        if (diferencia > 10) return;
-        if (mapaCombinado.has(precio)) {
-          const existente = mapaCombinado.get(precio);
-          existente.qty += orden.qty;
-          existente.usdt += orden.usdt;
-          existente.hits += orden.hits;
-          existente.lastUpdated = Math.max(existente.lastUpdated, orden.lastUpdated);
-          existente.colorAssignedTime = Math.max(existente.colorAssignedTime, orden.lastUpdated);
-          existente.markets = [...(existente.markets || []), mercado].filter((v, i, a) => a.indexOf(v) === i);
-        } else {
-          mapaCombinado.set(precio, {
-            price: precio,
-            qty: orden.qty,
-            usdt: orden.usdt,
-            lastUpdated: orden.lastUpdated,
-            colorAssignedTime: orden.lastUpdated,
-            hits: orden.hits,
-            markets: [mercado]
-          });
-        }
-      });
-      return Array.from(mapaCombinado.values())
+      
+      // Filtrar y ordenar por liquidez (USDT value)
+      return Array.from(orderMap.values())
+        .filter(order => order.usdt > 100)
         .sort((a, b) => b.usdt - a.usdt)
-        .slice(0, 30);
+        .slice(0, 20);
     }
-
-    function obtenerClaseColor(item, precioSpot, precioFutures, ahora) {
-      let precioReferencia;
-      if (item.markets.includes('spot') && item.markets.includes('futures')) {
-        precioReferencia = (precioSpot + precioFutures) / 2;
-      } else if (item.markets.includes('spot')) {
-        precioReferencia = precioSpot;
-      } else {
-        precioReferencia = precioFutures;
-      }
-      if (!precioReferencia || precioReferencia === 0) return "color-transparent";
-      const diferencia = ((item.price - precioReferencia) / precioReferencia) * 100;
-      const difAbsoluta = Math.abs(diferencia);
-      const edadColor = ahora - item.colorAssignedTime;
-      if (edadColor > COLOR_DURATION_MS) {
-        return "color-transparent";
-      }
-      if (difAbsoluta <= 0.1) {
-        return "color-orange";
-      } else if (difAbsoluta > 0.1 && difAbsoluta <= 0.5) {
-        return "color-yellow";
-      } else if (difAbsoluta > 0.5 && difAbsoluta <= 1) {
-        return "color-blue";
-      }
-      return "color-transparent";
+    
+    // Actualizar tablas de bids y asks
+    function updateTables() {
+      updateTable("asks-body", futuresAsksData, true);
+      updateTable("bids-body", futuresBidsData, false);
     }
-
-    function actualizarTablas() {
-      const asksCombinados = combinarOrdenes(spotAsksData, futuresAsksData, markPriceSpot, markPriceFutures, true);
-      const bidsCombinados = combinarOrdenes(spotBidsData, futuresBidsData, markPriceSpot, markPriceFutures, false);
-      asksPriceMap.clear();
-      asksCombinados.forEach(item => asksPriceMap.set(item.price, true));
-      bidsPriceMap.clear();
-      bidsCombinados.forEach(item => bidsPriceMap.set(item.price, true));
-      actualizarTabla("asks-body", asksCombinados, markPriceSpot, markPriceFutures, true);
-      actualizarTabla("bids-body", bidsCombinados, markPriceSpot, markPriceFutures, false);
-    }
-
-    function actualizarTabla(tablaId, datos, precioSpot, precioFutures, esAsk) {
-      const cuerpoTabla = document.getElementById(tablaId);
-      const ahora = Date.now();
-      const filasExistentes = new Map();
-      Array.from(cuerpoTabla.children).forEach(fila => {
-        const precio = parseFloat(fila.cells[2].textContent);
-        filasExistentes.set(precio, fila);
+    
+    // Actualizar una tabla específica
+    function updateTable(tableId, data, isAsk) {
+      const tableBody = document.getElementById(tableId);
+      if (!tableBody) return;
+      
+      const now = Date.now();
+      const existingRows = new Map();
+      
+      Array.from(tableBody.children).forEach(row => {
+        const priceCell = row.querySelector('.price-cell');
+        if (priceCell) {
+          const price = parseFloat(priceCell.textContent);
+          existingRows.set(price, row);
+        }
       });
-      const fragmento = document.createDocumentFragment();
-      datos.forEach((item, idx) => {
-        const tiempoEdad = formatearEdad(ahora - item.lastUpdated);
-        let precioReferencia;
-        if (item.markets.includes('spot') && item.markets.includes('futures')) {
-          precioReferencia = (precioSpot + precioFutures) / 2;
-        } else if (item.markets.includes('spot')) {
-          precioReferencia = precioSpot;
+      
+      const fragment = document.createDocumentFragment();
+      
+      data.forEach((item, index) => {
+        const age = formatAge(now - item.lastUpdated);
+        const percentage = markPriceFutures ? 
+          (((item.price - markPriceFutures) / markPriceFutures) * 100).toFixed(3) + "%" : 
+          "---";
+        
+        let row = existingRows.get(item.price);
+        
+        if (!row) {
+          row = document.createElement("tr");
+          row.className = isAsk ? "ask-row" : "bid-row";
+        }
+        
+        if (index < 5) {
+          row.classList.add("highlight-top");
         } else {
-          precioReferencia = precioFutures;
+          row.classList.remove("highlight-top");
         }
-        const porcentaje = precioReferencia ? (((item.price - precioReferencia) / precioReferencia) * 100).toFixed(3) + "%" : "---";
-        let fila = filasExistentes.get(item.price);
-        if (!fila) {
-          fila = document.createElement("tr");
-          fila.className = esAsk ? "ask-row" : "bid-row";
-        }
-        if (idx < 4) {
-          fila.classList.add("highlight-top");
+        
+        // Añadir clase especial para órdenes institucionales
+        if (item.usdt >= LARGE_ORDER_THRESHOLD) {
+          row.classList.add("color-purple");
         } else {
-          fila.classList.remove("highlight-top");
+          const newColorClass = getColorClass(item, now);
+          row.classList.remove("color-transparent", "color-blue", "color-yellow", "color-orange", "color-purple");
+          row.classList.add(newColorClass);
+          rowColors.set(item.price, newColorClass);
         }
-        const nuevaClaseColor = obtenerClaseColor(item, precioSpot, precioFutures, ahora);
-        fila.classList.remove("color-transparent", "color-blue", "color-yellow", "color-orange");
-        fila.classList.add(nuevaClaseColor);
-        rowColors.set(item.price, nuevaClaseColor);
-        if (nuevaClaseColor !== "color-transparent") {
-          fila.classList.add("bold-row");
+        
+        if (item.usdt >= LARGE_ORDER_THRESHOLD || getColorClass(item, now) !== "color-transparent") {
+          row.classList.add("bold-row");
         } else {
-          fila.classList.remove("bold-row");
+          row.classList.remove("bold-row");
         }
-        const actualizadoRecientemente = item.lastUpdated && (ahora - item.lastUpdated) <= 1000;
-        if (actualizadoRecientemente) {
-          const claseResaltado = esAsk ? "highlight-red" : "highlight-green";
-          fila.classList.remove("highlight-red", "highlight-green");
-          fila.classList.add(claseResaltado);
+        
+        const recentlyUpdated = item.lastUpdated && (now - item.lastUpdated) <= 1000;
+        if (recentlyUpdated) {
+          const highlightClass = isAsk ? "highlight-red" : "highlight-green";
+          row.classList.remove("highlight-red", "highlight-green");
+          row.classList.add(highlightClass);
+          
           setTimeout(() => {
-            fila.classList.remove("highlight-red", "highlight-green");
-            fila.classList.remove("color-transparent", "color-blue", "color-yellow", "color-orange");
-            const claseColorActualizada = obtenerClaseColor(item, precioSpot, precioFutures, Date.now());
-            fila.classList.add(claseColorActualizada);
-            rowColors.set(item.price, claseColorActualizada);
-            if (claseColorActualizada !== "color-transparent") {
-              fila.classList.add("bold-row");
+            row.classList.remove("highlight-red", "highlight-green");
+            const updatedColorClass = getColorClass(item, Date.now());
+            row.classList.remove("color-transparent", "color-blue", "color-yellow", "color-orange", "color-purple");
+            row.classList.add(updatedColorClass);
+            rowColors.set(item.price, updatedColorClass);
+            
+            if (updatedColorClass !== "color-transparent" || item.usdt >= LARGE_ORDER_THRESHOLD) {
+              row.classList.add("bold-row");
             } else {
-              fila.classList.remove("bold-row");
+              row.classList.remove("bold-row");
             }
           }, 1000);
-        } else {
-          fila.classList.remove("highlight-red", "highlight-green");
         }
-        const estaSeleccionado = selectedPrices.has(item.price);
-        if (estaSeleccionado) {
-          fila.classList.add("selected-row");
+        
+        const isSelected = selectedPrices.has(item.price);
+        if (isSelected) {
+          row.classList.add("selected-row");
         } else {
-          fila.classList.remove("selected-row");
+          row.classList.remove("selected-row");
         }
-        fila.innerHTML = `
-          <td><span>${idx + 1}</span></td>
-          <td class="age-cell"><span>${tiempoEdad}</span></td>
-          <td class="price-cell"><span>${formatearPrecio(item.price)}</span></td>
-          <td><span>${formatearCantidad(item.qty)}</span></td>
-          <td><span>${formatearUsdt(item.usdt)}</span></td>
-          <td><span>${porcentaje}</span></td>
+        
+        row.innerHTML = `
+          <td><span>${index + 1}</span></td>
+          <td class="age-cell"><span>${age}</span></td>
+          <td class="price-cell"><span>${formatPrice(item.price)}</span></td>
+          <td><span>${formatQuantity(item.qty)}</span></td>
+          <td><span>${formatUsdt(item.usdt)}</span></td>
+          <td><span>${percentage}</span></td>
           <td><span>${item.hits}</span></td>
           <td class="selected-column">
-            <input type="checkbox" class="selection-checkbox" ${estaSeleccionado ? 'checked' : ''} 
-            onchange="alternarSeleccionPrecio(${item.price}, ${esAsk}, this)">
-          </td>
-        `;
-        fragmento.appendChild(fila);
-        filasExistentes.delete(item.price);
+            <input type="checkbox" class="selection-checkbox" ${isSelected ? 'checked' : ''} 
+            onchange="togglePriceSelection(${item.price}, ${isAsk}, this)"
+            onmouseenter="startInteraction()" 
+            onmouseleave="endInteraction()"
+            onfocus="startInteraction()"
+            onblur="endInteraction()"
+            aria-label="${isSelected ? 'Deseleccionar' : 'Seleccionar'} precio ${formatPrice(item.price)}">
+        </td>
+      `;
+        
+        fragment.appendChild(row);
+        existingRows.delete(item.price);
       });
-      filasExistentes.forEach(fila => {
-        const precio = parseFloat(fila.cells[2].textContent);
-        rowColors.delete(precio);
-        fila.remove();
+      
+      existingRows.forEach(row => {
+        const priceCell = row.querySelector('.price-cell');
+        if (priceCell) {
+          const price = parseFloat(priceCell.textContent);
+          rowColors.delete(price);
+        }
+        row.remove();
       });
-      cuerpoTabla.innerHTML = '';
-      cuerpoTabla.appendChild(fragmento);
+      
+      tableBody.innerHTML = '';
+      tableBody.appendChild(fragment);
+      
       redrawSelectedLines();
     }
+    
+    // Obtener clase de color basada en la proximidad al mark price
+    function getColorClass(item, now) {
+      if (!markPriceFutures || markPriceFutures === 0) return "color-transparent";
+      
+      const difference = ((item.price - markPriceFutures) / markPriceFutures) * 100;
+      const absoluteDifference = Math.abs(difference);
+      const colorAge = now - item.colorAssignedTime;
+      
+      if (colorAge > COLOR_DURATION_MS) {
+        return "color-transparent";
+      }
+      
+      if (absoluteDifference <= 0.1) {
+        return "color-orange";
+      } else if (absoluteDifference > 0.1 && absoluteDifference <= 0.5) {
+        return "color-yellow";
+      } else if (absoluteDifference > 0.5 && absoluteDifference <= 1) {
+        return "color-blue";
+      }
+      
+      return "color-transparent";
+    }
+    
+    // Programar actualización de tablas con debounce
+    function scheduleTableUpdate() {
+      if (!pendingUpdate && !updatePaused) {
+        pendingUpdate = true;
+        setTimeout(() => {
+          updateTables();
+          pendingUpdate = false;
+        }, 100);
+      }
+    }
 
-    function actualizarColumnasEdad() {
-      const ahora = Date.now();
-      ["asks-body", "bids-body"].forEach(tablaId => {
-        const cuerpoTabla = document.getElementById(tablaId);
-        Array.from(cuerpoTabla.children).forEach(fila => {
-          const precio = parseFloat(fila.cells[2].textContent);
-          const datos = tablaId === "asks-body" ? combinarOrdenes(spotAsksData, futuresAsksData, markPriceSpot, markPriceFutures, true) : combinarOrdenes(spotBidsData, futuresBidsData, markPriceSpot, markPriceFutures, false);
-          const item = datos.find(item => item.price === precio);
-          if (item) {
-            const tiempoEdad = formatearEdad(ahora - item.lastUpdated);
-            fila.cells[1].querySelector('span').textContent = tiempoEdad;
+    // Funciones de manejo de interacción
+    function startInteraction() {
+  isInteracting = true;
+  updatePaused = true;
+    }
+
+    function endInteraction() {
+  isInteracting = false;
+  updatePaused = false;
+  scheduleTableUpdate(); // Forzar actualización al terminar la interacción
+    }
+    
+    // Actualizar contadores de órdenes procesadas
+    function updateProcessedCounters() {
+      const totalPrices = asksProcessed + bidsProcessed;
+      
+      document.getElementById("total-prices").innerText = totalPrices.toLocaleString();
+      document.getElementById("asks-processed").innerText = asksProcessed.toLocaleString();
+      document.getElementById("bids-processed").innerText = bidsProcessed.toLocaleString();
+      
+      if (totalPrices >= 1000000) {
+        document.getElementById("total-prices").classList.add("highlight-total");
+      } else {
+        document.getElementById("total-prices").classList.remove("highlight-total");
+      }
+      
+      const askIndicatorStart = document.getElementById("asks-indicator-start");
+      const askIndicatorEnd = document.getElementById("asks-indicator-end");
+      const bidIndicatorStart = document.getElementById("bids-indicator-start");
+      const bidIndicatorEnd = document.getElementById("bids-indicator-end");
+      
+      if (askIndicatorStart && askIndicatorEnd && bidIndicatorStart && bidIndicatorEnd) {
+        askIndicatorStart.classList.remove("circle-red", "circle-green");
+        askIndicatorEnd.classList.remove("circle-red", "circle-green");
+        bidIndicatorStart.classList.remove("circle-red", "circle-green");
+        bidIndicatorEnd.classList.remove("circle-red", "circle-green");
+        
+        if (asksProcessed > bidsProcessed) {
+          askIndicatorStart.classList.add("circle-red");
+          askIndicatorEnd.classList.add("circle-red");
+        } else if (bidsProcessed > asksProcessed) {
+          bidIndicatorStart.classList.add("circle-green");
+          bidIndicatorEnd.classList.add("circle-green");
+        }
+      }
+      
+      scheduleTableUpdate();
+    }
+    
+    // Actualizar estadísticas de liquidez
+    function updateLiquidityStats() {
+      const totalAskLiquidity = futuresAsksData.reduce((sum, order) => sum + order.usdt, 0);
+      const totalBidLiquidity = futuresBidsData.reduce((sum, order) => sum + order.usdt, 0);
+      
+      const largeAsksCount = futuresAsksData.filter(order => order.usdt >= LARGE_ORDER_THRESHOLD).length;
+      const largeBidsCount = futuresBidsData.filter(order => order.usdt >= LARGE_ORDER_THRESHOLD).length;
+      
+      document.getElementById("total-ask-liquidity").textContent = formatUsdt(totalAskLiquidity);
+      document.getElementById("total-bid-liquidity").textContent = formatUsdt(totalBidLiquidity);
+      document.getElementById("large-asks-count").textContent = largeAsksCount;
+      document.getElementById("large-bids-count").textContent = largeBidsCount;
+    }
+    
+    // Calcular y mostrar desequilibrio del libro de órdenes
+    function updateOrderBookImbalance() {
+      const totalBidLiquidity = futuresBidsData.reduce((sum, order) => sum + order.usdt, 0);
+      const totalAskLiquidity = futuresAsksData.reduce((sum, order) => sum + order.usdt, 0);
+      const totalLiquidity = totalBidLiquidity + totalAskLiquidity;
+      
+      if (totalLiquidity > 0) {
+        const imbalance = ((totalBidLiquidity - totalAskLiquidity) / totalLiquidity) * 100;
+        document.getElementById("orderbook-imbalance").textContent = `${imbalance.toFixed(2)}%`;
+        
+        // Actualizar indicador visual
+        const indicator = document.getElementById("imbalance-indicator");
+        if (indicator) {
+          // Mapear de -100% a +100% a 0% a 100% para la posición
+          const position = (imbalance + 100) / 2;
+          indicator.style.left = `${position}%`;
+        }
+      }
+    }
+    
+    // Actualizar spread del mercado
+    function updateMarketSpread() {
+      if (futuresBidsData.length > 0 && futuresAsksData.length > 0 && markPriceFutures > 0) {
+        const bestBid = futuresBidsData[0].price;
+        const bestAsk = futuresAsksData[0].price;
+        const spread = bestAsk - bestBid;
+        const spreadPercentage = (spread / markPriceFutures) * 100;
+        
+        document.getElementById("market-spread").textContent = `${formatPrice(spread)} (${spreadPercentage.toFixed(3)}%)`;
+        document.getElementById("best-bid-ask").textContent = `${formatPrice(bestBid)} / ${formatPrice(bestAsk)}`;
+      }
+    }
+    
+    // Seguimiento de cambios en liquidez
+    function trackLiquidityChanges() {
+      const snapshot = {
+        time: Date.now(),
+        bids: futuresBidsData.map(o => ({price: o.price, usdt: o.usdt})),
+        asks: futuresAsksData.map(o => ({price: o.price, usdt: o.usdt}))
+      };
+      
+      liquidityHistory.push(snapshot);
+      if (liquidityHistory.length > MAX_HISTORY) {
+        liquidityHistory.shift();
+      }
+    }
+    
+    // Mostrar clusters de liquidez
+    function showLiquidityClusters() {
+      if (liquidityHistory.length < 2) return;
+      
+      // Agrupar órdenes por niveles de precio redondeados
+      const priceLevels = {};
+      const priceStep = markPriceFutures * 0.001; // 0.1% del precio actual
+      
+      liquidityHistory.forEach(snapshot => {
+        [...snapshot.bids, ...snapshot.asks].forEach(order => {
+          const roundedPrice = Math.round(order.price / priceStep) * priceStep;
+          if (!priceLevels[roundedPrice]) {
+            priceLevels[roundedPrice] = {
+              totalUsdt: 0,
+              count: 0,
+              lastSeen: 0
+            };
           }
+          priceLevels[roundedPrice].totalUsdt += order.usdt;
+          priceLevels[roundedPrice].count++;
+          priceLevels[roundedPrice].lastSeen = Math.max(priceLevels[roundedPrice].lastSeen, snapshot.time);
         });
       });
-    }
-
-    setInterval(actualizarColumnasEdad, 100);
-
-    function manejarSeleccion(evento) {
-      const celda = evento.target.closest('.price-cell');
-      if (!celda) return;
-      const span = celda.querySelector('span');
-      if (!span) return;
-      const seleccion = window.getSelection();
-      if (!seleccion.toString()) {
-        const rango = document.createRange();
-        rango.selectNodeContents(span);
-        seleccion.removeAllRanges();
-        seleccion.addRange(rango);
-      }
-      evento.preventDefault();
-    }
-
-    function copiarCeldaPrecio(evento) {
-      const celda = evento.target.closest('.price-cell');
-      if (!celda) return;
-      const texto = celda.textContent.trim();
-      if (!texto) {
-        console.error("No hay texto para copiar en la celda de precio");
-        return;
-      }
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(texto).then(() => {
-          celda.classList.add("copied");
-          setTimeout(() => celda.classList.remove("copied"), 500);
-          isInteracting = false;
-        }).catch(err => {
-          console.error("Error al copiar precio con navigator.clipboard:", err.message);
-          copiarTextoAlternativo(texto, celda);
-        });
+      
+      // Filtrar y ordenar los clusters más significativos
+      const significantClusters = Object.entries(priceLevels)
+        .filter(([_, data]) => data.totalUsdt >= LARGE_ORDER_THRESHOLD)
+        .sort((a, b) => b[1].totalUsdt - a[1].totalUsdt)
+        .slice(0, 5);
+      
+      // Mostrar alerta con los clusters encontrados
+      if (significantClusters.length > 0) {
+        const alertText = significantClusters.map(
+          ([price, data]) => `${formatPrice(parseFloat(price))}: ${formatUsdt(data.totalUsdt)} (${data.count}x)`
+        ).join('\n');
+        
+        alert("Clusters de liquidez significativos:\n" + alertText);
+        
+        // Dibujar los clusters en el gráfico
+        if (chart) {
+          const now = Math.floor(Date.now() / 1000);
+          const markers = significantClusters.map(([price, _]) => ({
+            time: now,
+            position: 'inBar',
+            color: '#9c27b0',
+            shape: 'square',
+            text: 'Cluster',
+            size: 2
+          }));
+          
+          candlestickSeries.setMarkers(markers);
+          setTimeout(() => candlestickSeries.setMarkers([]), 10000);
+        }
       } else {
-        console.warn("navigator.clipboard no disponible o contexto inseguro, usando fallback");
-        copiarTextoAlternativo(texto, celda);
-      }
-      evento.preventDefault();
-    }
-
-    function copiarTextoAlternativo(texto, celda) {
-      const areaTexto = document.createElement("textarea");
-      areaTexto.value = texto;
-      areaTexto.style.position = "fixed";
-      areaTexto.style.opacity = "0";
-      document.body.appendChild(areaTexto);
-      areaTexto.focus();
-      areaTexto.select();
-      try {
-        document.execCommand('copy');
-        celda.classList.add("copied");
-        setTimeout(() => celda.classList.remove("copied"), 500);
-        isInteracting = false;
-      } catch (err) {
-        console.error("Error al copiar con fallback:", err.message);
-      } finally {
-        document.body.removeChild(areaTexto);
+        alert("No se encontraron clusters de liquidez significativos");
       }
     }
-
-    function programarActualizacionTabla() {
-      if (!pendingUpdate && !isInteracting) {
-        pendingUpdate = true;
-        requestAnimationFrame(() => {
-          actualizarTablas();
-          pendingUpdate = false;
+    
+    // Alternar heatmap de liquidez
+    function toggleLiquidityHeatmap() {
+      heatmapEnabled = !heatmapEnabled;
+      
+      if (heatmapEnabled && chart) {
+        // Crear series de heatmap
+        const heatmapSeries = chart.addHeatmapSeries({
+          colorScale: [
+            { color: 'rgba(0, 0, 255, 0.1)', offset: 0 },
+            { color: 'rgba(0, 255, 0, 0.3)', offset: 0.5 },
+            { color: 'rgba(255, 0, 0, 0.5)', offset: 1 }
+          ],
+          radius: 10
         });
+        
+        // Preparar datos para el heatmap
+        const heatmapData = [];
+        const now = Math.floor(Date.now() / 1000);
+        const oneHourAgo = now - 3600;
+        
+        liquidityHistory.forEach(snapshot => {
+          if (snapshot.time >= oneHourAgo * 1000) {
+            [...snapshot.bids, ...snapshot.asks].forEach(order => {
+              if (order.usdt >= LARGE_ORDER_THRESHOLD / 10) {
+                heatmapData.push({
+                  time: Math.floor(snapshot.time / 1000),
+                  value: order.price,
+                  intensity: Math.min(1, order.usdt / VERY_LARGE_ORDER_THRESHOLD)
+                });
+              }
+            });
+          }
+        });
+        
+        heatmapSeries.setData(heatmapData);
+        
+        // Guardar referencia para poder eliminarla después
+        window.heatmapSeries = heatmapSeries;
+      } else if (chart && window.heatmapSeries) {
+        chart.removeSeries(window.heatmapSeries);
+        window.heatmapSeries = null;
       }
     }
-
-    function formatearPrecio(precio) {
-      const decimales = obtenerDecimales(symbol);
-      return precio.toFixed(decimales).replace(/(\.\d+?)0+$/, "$1");
+    
+    // Guardar niveles clave
+    function saveKeyLevels() {
+      const keyLevels = {
+        bids: futuresBidsData.filter(b => b.usdt >= LARGE_ORDER_THRESHOLD),
+        asks: futuresAsksData.filter(a => a.usdt >= LARGE_ORDER_THRESHOLD),
+        timestamp: Date.now()
+      };
+      
+      localStorage.setItem(`keyLevels_${symbol}`, JSON.stringify(keyLevels));
+      showAlert(`Niveles clave guardados para ${symbol}`, 'volume');
     }
-
-    function obtenerDecimales(symbol) {
-      const decimales = {
-        "USDT": 2,
-        "ETHUSDT": 2,
-        "PEPEUSDT": 8,
-        "SHIBUSDT": 8,
+    
+    // Actualizar umbrales de órdenes grandes
+    function updateThresholds() {
+      const largeThresholdInput = document.getElementById("large-threshold");
+      const veryLargeThresholdInput = document.getElementById("very-large-threshold");
+      
+      if (largeThresholdInput && veryLargeThresholdInput) {
+        LARGE_ORDER_THRESHOLD = parseFloat(largeThresholdInput.value) || 50000000;
+        VERY_LARGE_ORDER_THRESHOLD = parseFloat(veryLargeThresholdInput.value) || 100000000;
+        
+        // Forzar actualización de tablas
+        updateTables();
+        showAlert(`Umbrales actualizados: ${formatUsdt(LARGE_ORDER_THRESHOLD)} / ${formatUsdt(VERY_LARGE_ORDER_THRESHOLD)}`, 'volume');
+      }
+    }
+    
+    // Alternar alertas de sonido
+    function toggleSoundAlerts() {
+      ALERT_SETTINGS.soundEnabled = !ALERT_SETTINGS.soundEnabled;
+      localStorage.setItem('alertSettings', JSON.stringify(ALERT_SETTINGS));
+      
+      const soundToggle = document.getElementById("sound-toggle");
+      if (soundToggle) {
+        soundToggle.textContent = ALERT_SETTINGS.soundEnabled ? "🔊 Sonido: ON" : "🔇 Sonido: OFF";
+      }
+    }
+    
+    // Inicializar sistema de alertas
+    function initAlerts() {
+      // Cargar configuración desde localStorage
+      const savedSettings = localStorage.getItem('alertSettings');
+      if (savedSettings) {
+        Object.assign(ALERT_SETTINGS, JSON.parse(savedSettings));
+      }
+      
+      // Configurar el botón de sonido según la configuración
+      const soundToggle = document.getElementById("sound-toggle");
+      if (soundToggle) {
+        soundToggle.textContent = ALERT_SETTINGS.soundEnabled ? "🔊 Sonido: ON" : "🔇 Sonido: OFF";
+      }
+      
+      // Verificar alertas cada 10 segundos
+      setInterval(checkAlerts, 10000);
+    }
+    
+    // Verificar condiciones para alertas
+    function checkAlerts() {
+      if (!markPriceFutures || futuresBidsData.length === 0 || futuresAsksData.length === 0) return;
+      
+      // Alerta de Spread
+      const spreadText = document.getElementById('market-spread').textContent;
+      const spreadMatch = spreadText.match(/\(([\d.]+)%\)/);
+      if (spreadMatch) {
+        const spread = parseFloat(spreadMatch[1]);
+        if (spread > ALERT_SETTINGS.spreadAlert) {
+          showAlert(`Spread alto: ${spread.toFixed(2)}%`, 'spread');
+        }
+      }
+      
+      // Alerta de Desequilibrio
+      const imbalanceText = document.getElementById('orderbook-imbalance').textContent;
+      const imbalance = parseFloat(imbalanceText);
+      if (Math.abs(imbalance) > ALERT_SETTINGS.imbalanceAlert) {
+        const direction = imbalance > 0 ? "COMPRA" : "VENTA";
+        showAlert(`Desequilibrio extremo (${direction}): ${Math.abs(imbalance).toFixed(2)}%`, 'imbalance');
+      }
+      
+      // Alerta de Volumen
+      const bidLiquidityText = document.getElementById('total-bid-liquidity').textContent;
+      const askLiquidityText = document.getElementById('total-ask-liquidity').textContent;
+      
+      const bidLiquidity = parseFloat(bidLiquidityText.replace(/[^0-9.]/g, ''));
+      const askLiquidity = parseFloat(askLiquidityText.replace(/[^0-9.]/g, ''));
+      
+      if (bidLiquidity > ALERT_SETTINGS.volumeAlert) {
+        showAlert(`Liquidez BID inusual: ${formatUsdt(bidLiquidity)}`, 'volume');
+      }
+      
+      if (askLiquidity > ALERT_SETTINGS.volumeAlert) {
+        showAlert(`Liquidez ASK inusual: ${formatUsdt(askLiquidity)}`, 'volume');
+      }
+    }
+    
+    // Mostrar alerta en el sistema
+    function showAlert(message, type) {
+      // Verificar si ya existe una alerta similar
+      const existingAlerts = document.querySelectorAll('.market-alert');
+      for (const alert of existingAlerts) {
+        if (alert.textContent.includes(message.substring(0, 20))) {
+          return; // No mostrar alertas duplicadas
+        }
+      }
+      
+      const alertDiv = document.createElement('div');
+      alertDiv.className = `market-alert ${type}-alert`;
+      alertDiv.innerHTML = `
+        <span class="alert-time">${new Date().toLocaleTimeString()}</span>
+        <span class="alert-message">${message}</span>
+        <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+      `;
+      
+      document.getElementById('alert-container').prepend(alertDiv);
+      
+      // Reproducir sonido si está activado
+      if (ALERT_SETTINGS.soundEnabled) {
+        playAlertSound(type);
+      }
+      
+      // Auto-eliminar después de 1 minuto
+      setTimeout(() => {
+        if (alertDiv.parentNode) {
+          alertDiv.remove();
+        }
+      }, 60000);
+    }
+    
+    // Reproducir sonido de alerta
+    function playAlertSound(type) {
+      const audio = new Audio();
+      let soundFile = '';
+      
+      switch(type) {
+        case 'spread':
+          soundFile = 'https://assets.mixkit.co/sfx/preview/mixkit-alert-quick-chime-766.mp3';
+          break;
+        case 'imbalance':
+          soundFile = 'https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3';
+          break;
+        case 'volume':
+          soundFile = 'https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3';
+          break;
+        default:
+          soundFile = 'https://assets.mixkit.co/sfx/preview/mixkit-positive-interface-beep-221.mp3';
+      }
+      
+      audio.src = soundFile;
+      audio.volume = 0.3;
+      audio.play().catch(e => console.log("Error al reproducir sonido:", e));
+    }
+    
+    // Formateadores
+    function formatPrice(price) {
+      const decimals = getDecimals(symbol);
+      return price.toFixed(decimals).replace(/(\.\d+?)0+$/, "$1");
+    }
+    
+    function getDecimals(symbol) {
+      const decimalsMap = {
         "BTCUSDT": 2,
+        "ETHUSDT": 2,
+        "BNBUSDT": 2,
+        "SOLUSDT": 4,
         "XRPUSDT": 4,
-        "SOLUSDT": 4
+        "ADAUSDT": 5,
+        "DOGEUSDT": 5,
+        "DOTUSDT": 3,
+        "MATICUSDT": 4,
+        "LTCUSDT": 2,
+        "AVAXUSDT": 3,
+        "LINKUSDT": 3,
+        "ATOMUSDT": 3,
+        "UNIUSDT": 3,
+        "FILUSDT": 3,
+        "XLMUSDT": 5,
+        "ETCUSDT": 3,
+        "XTZUSDT": 3,
+        "SUSHIUSDT": 3,
+        "AAVEUSDT": 2,
+        "GRTUSDT": 5,
+        "ALGOUSDT": 4,
+        "KSMUSDT": 2,
+        "COMPUSDT": 2,
+        "YFIUSDT": 2,
+        "SNXUSDT": 3,
+        "BALUSDT": 3,
+        "CRVUSDT": 4,
+        "SANDUSDT": 5,
+        "MANAUSDT": 5,
+        "AXSUSDT": 3,
+        "GALAUSDT": 6,
+        "APEUSDT": 4,
+        "PEOPLEUSDT": 6,
+        "ENSUSDT": 3,
+        "ANTUSDT": 3,
+        "GMTUSDT": 4,
+        "APEUSDT": 4,
+        "GALUSDT": 5,
+        "OPUSDT": 4,
+        "INJUSDT": 3,
+        "STGUSDT": 4,
+        "SPELLUSDT": 6,
+        "1000SHIBUSDT": 6,
+        "1000PEPEUSDT": 8,
+        "1000FLOKIUSDT": 7,
+        "1000LUNCUSDT": 6,
+        "1000XECUSDT": 6
       };
-      return decimales[symbol] || 4;
+      
+      return decimalsMap[symbol] || 4;
     }
-
-    function formatearCantidad(cantidad) {
-      if (cantidad >= 1000) return (cantidad / 1000).toFixed(2) + "K";
-      return cantidad.toFixed(3);
+    
+    function formatQuantity(quantity) {
+      if (quantity >= 1000000) return (quantity / 1000000).toFixed(2) + "M";
+      if (quantity >= 1000) return (quantity / 1000).toFixed(2) + "K";
+      return quantity.toFixed(4);
     }
-
-    function formatearEdad(milisegundos) {
-      if (milisegundos < 0) {
-        console.warn(`Edad negativa detectada: ${milisegundos}ms`);
-        return "00:00:00";
+    
+    function formatUsdt(value) {
+      if (value >= 1000000000) return (value / 1000000000).toFixed(2) + "B";
+      if (value >= 1000000) return (value / 1000000).toFixed(2) + "M";
+      if (value >= 1000) return (value / 1000).toFixed(2) + "K";
+      return value.toFixed(2);
+    }
+    
+    function formatAge(milliseconds) {
+      if (milliseconds < 0) return "0s";
+      
+      const totalSeconds = Math.floor(milliseconds / 1000);
+      
+      // Menos de 1 minuto: mostrar en segundos
+      if (totalSeconds < 60) return `${totalSeconds}s`;
+      
+      // Menos de 1 hora: mostrar en minutos
+      if (totalSeconds < 3600) return `${Math.floor(totalSeconds / 60)}m`;
+      
+      // Menos de 1 día: mostrar en horas
+      if (totalSeconds < 86400) return `${Math.floor(totalSeconds / 3600)}h`;
+      
+      // Más de 1 día: mostrar en días
+      return `${Math.floor(totalSeconds / 86400)}d`;
+    }
+    
+    function updateTimestamp() {
+      const now = new Date();
+      const offset = -4 * 60 * 60 * 1000; // GMT-4
+      const localTime = new Date(now.getTime() + offset);
+      
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+      
+      const dayName = days[localTime.getUTCDay()];
+      const month = months[localTime.getUTCMonth()];
+      const date = String(localTime.getUTCDate()).padStart(2, '0');
+      const year = localTime.getUTCFullYear();
+      
+      let hours = localTime.getUTCHours();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12; // Convertir 0 a 12
+      const minutes = String(localTime.getUTCMinutes()).padStart(2, '0');
+      const seconds = String(localTime.getUTCSeconds()).padStart(2, '0');
+      const milliseconds = String(localTime.getUTCMilliseconds()).padStart(3, '0').slice(0,1);
+      
+      document.getElementById('compact-timestamp').textContent = 
+        `${dayName} ${month}/${date}/${year}, ${hours}:${minutes}:${seconds}.${milliseconds} ${ampm} GMT-04:00`;
+      
+      // Verificar si el precio está actualizado (últimos 5 segundos)
+      if (lastPriceUpdate && (now.getTime() - lastPriceUpdate > 5000)) {
+        document.getElementById("symbol-title").style.color = "#ff5555";
+      } else {
+        document.getElementById("symbol-title").style.color = "#55ff55";
       }
-      const segundosTotales = Math.floor(milisegundos / 1000);
-      const horas = String(Math.floor(segundosTotales / 3600)).padStart(2, "0");
-      const minutos = String(Math.floor((segundosTotales % 3600) / 60)).padStart(2, "0");
-      const segundos = String(segundosTotales % 60).padStart(2, "0");
-      return `${horas}:${minutos}:${segundos}`;
     }
-
-    function actualizarTimestamp() {
-      const ahora = new Date();
-      const offset = -4 * 60;
-      const horaLocal = new Date(ahora.getTime() + (offset * 60 * 1000));
-      const opciones = {
-        weekday: 'short',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        fractionalSecondDigits: 1,
-        hour12: true,
-        timeZone: 'UTC'
-      };
-      const fechaFormateada = horaLocal.toLocaleString('en-US', opciones)
-        .replace(',', '')
-        .replace(/\//g, '/')
-        .replace(' AM', ' AM')
-        .replace(' PM', ' PM');
-      document.getElementById('local-time').textContent = `${fechaFormateada} GMT-04:00`;
-    }
-
-    function formatearUsdt(valor) {
-      if (valor >= 1.0e6) return (valor / 1.0e6).toFixed(2) + "M";
-      if (valor >= 1.0e3) return (valor / 1.0e3).toFixed(2) + "K";
-      return valor.toFixed(2);
-    }
-
+    
+    // Manejo de gráfico
     function initializeChart() {
       try {
         const chartContainer = document.getElementById("chart-container");
-        if (!chartContainer) {
-          throw new Error("Contenedor del gráfico no encontrado (#chart-container).");
+        if (!chartContainer) return;
+        
+        // Mostrar mensaje de carga
+        const loadingMsg = chartContainer.querySelector('.loading-message');
+        if (loadingMsg) {
+          loadingMsg.style.display = 'block';
+          loadingMsg.textContent = "Inicializando gráfico...";
         }
+        
         if (chart) {
           chart.remove();
           chart = null;
           candlestickSeries = null;
           emaSeries = null;
-          selectedPrices.forEach((data, price) => {
-            if (data.series) {
-              chart.removeSeries(data.series);
-            }
-          });
-          selectedPrices.clear();
         }
-        if (typeof LightweightCharts === 'undefined') {
-          throw new Error("LightweightCharts no está disponible. Verifica el enlace del CDN.");
-        }
+        
         chart = LightweightCharts.createChart(chartContainer, {
           width: chartContainer.offsetWidth,
           height: 500,
@@ -1024,11 +1962,22 @@
           timeScale: {
             timeVisible: true,
             secondsVisible: false,
+            rightOffset: 10,
+            lockVisibleTimeRangeOnResize: true,
+            rightBarStaysOnScroll: true,
+            fixLeftEdge: true
           },
           rightPriceScale: {
             borderColor: '#444',
           },
+          handlingScroll: {
+            mouseWheel: false,
+            pressedMouseMove: false,
+            horzTouchDrag: false,
+            vertTouchDrag: false
+          }
         });
+        
         candlestickSeries = chart.addCandlestickSeries({
           upColor: '#00ff00',
           downColor: '#ff0000',
@@ -1036,303 +1985,32 @@
           wickUpColor: '#00ff00',
           wickDownColor: '#ff0000',
         });
+        
         emaSeries = chart.addLineSeries({
           color: '#ff9800',
           lineWidth: 2,
           title: 'EMA 100',
         });
-        chart.applyOptions({
-          priceScale: {
-            scaleMargins: { top: 0.1, bottom: 0.1 },
-          },
-        });
-        redrawSelectedLines();
-      } catch (err) {
-        mostrarError(`Error al inicializar el gráfico: ${err.message}`);
-        console.error("Detalles del error:", err);
-      }
-    }
-
-    async function loadHistoricalKlines() {
-      try {
-        const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${currentInterval}&limit=150`);
-        if (!response.ok) {
-          throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
-        }
-        const data = await response.json();
-        candlesData = data.map(kline => ({
-          time: Math.floor(kline[0] / 1000),
-          open: parseFloat(kline[1]),
-          high: parseFloat(kline[2]),
-          low: parseFloat(kline[3]),
-          close: parseFloat(kline[4]),
-        }));
-        if (candlestickSeries) {
-          candlestickSeries.setData(candlesData);
-          const ema100 = calculateEMA(candlesData, 100);
-          if (emaSeries) {
-            emaSeries.setData(ema100);
+        
+        // Configurar auto-centrado periódico
+        setInterval(() => {
+          if (chart) {
+            chart.timeScale().fitContent();
           }
-          chart.timeScale().fitContent();
-        } else {
-          console.warn("candlestickSeries no está inicializada. No se puede cargar el historial de velas.");
-          mostrarError("Error: candlestickSeries no inicializada.");
+        }, 30000);
+        
+        // Ocultar mensaje de carga cuando el gráfico esté listo
+        if (loadingMsg) {
+          loadingMsg.textContent = "Cargando datos...";
         }
       } catch (err) {
-        mostrarError(`Error al cargar el historial de velas: ${err.message}`);
-        console.error("Detalles del error:", err);
-        const now = new Date();
-        const intervalMs = currentInterval === '1d' ? 24 * 60 * 60 * 1000 :
-                          currentInterval === '4h' ? 4 * 60 * 60 * 1000 :
-                          currentInterval === '15m' ? 15 * 60 * 1000 : 60 * 60 * 1000;
-        candlesData = Array.from({ length: 150 }, (_, i) => {
-          const time = Math.floor((now.getTime() - i * intervalMs) / 1000);
-          const basePrice = markPriceSpot || 100;
-          const open = basePrice * (0.95 + Math.random() * 0.1);
-          const close = basePrice * (0.95 + Math.random() * 0.1);
-          return {
-            time,
-            open,
-            high: Math.max(open, close) * (1 + Math.random() * 0.02),
-            low: Math.min(open, close) * (1 - Math.random() * 0.02),
-            close,
-          };
-        }).reverse();
-        if (candlestickSeries) {
-          candlestickSeries.setData(candlesData);
-          const ema100 = calculateEMA(candlesData, 100);
-          if (emaSeries) {
-            emaSeries.setData(ema100);
-          }
-          chart.timeScale().fitContent();
-        }
+        showError(`Error al inicializar el gráfico: ${err.message}`);
+        const loadingMsg = document.querySelector('.loading-message');
+        if (loadingMsg) loadingMsg.textContent = "Error inicializando gráfico. Recargue la página.";
       }
     }
-
-    function calculateEMA(data, period) {
-      if (data.length < period) return [];
-      const k = 2 / (period + 1);
-      const emaData = [];
-      let ema = data.slice(0, period).reduce((sum, candle) => sum + candle.close, 0) / period;
-
-      emaData.push({ time: data[period - 1].time, value: ema });
-
-      for (let i = period; i < data.length; i++) {
-        ema = (data[i].close * k) + (ema * (1 - k));
-        emaData.push({ time: data[i].time, value: ema });
-      }
-      return emaData;
-    }
-
-    function setupKlineSocket() {
-      if (klineRetryCount >= MAX_RETRIES) {
-        mostrarError(`Máximo de reintentos alcanzado para WebSocket Kline (${currentInterval}). Usando polling REST.`);
-        iniciarPollingRest();
-        return;
-      }
-      limpiarWebSocketKline();
-      if (wsConnectionCount >= 5) {
-        mostrarError(`Límite de conexiones WebSocket alcanzado (${wsConnectionCount}). Intentando de nuevo...`);
-        klineRetryCount++;
-        const retraso = Math.min(10000 * Math.pow(2, klineRetryCount), 60000);
-        reconnectTimeout = setTimeout(setupKlineSocket, retraso);
-        return;
-      }
-      const wsUrl = `wss://stream.binance.com:443/ws/${symbol.toLowerCase()}@kline_${currentInterval}`;
-      console.log(`Conectando a WebSocket: ${wsUrl}`);
-      klineWs = new WebSocket(wsUrl);
-      klineWs.onopen = () => {
-        wsConnectionCount++;
-        console.log(`WebSocket Kline conectado para ${currentInterval} (Conexiones: ${wsConnectionCount})`);
-        document.getElementById("ws-status").textContent = `WebSocket: Conectado (Kline ${currentInterval})`;
-        klineRetryCount = 0;
-        const mensajeSuscripcion = {
-          method: "SUBSCRIBE",
-          params: [`${symbol.toLowerCase()}@kline_${currentInterval}`],
-          id: 1
-        };
-        console.log(`Enviando mensaje de suscripción: ${JSON.stringify(mensajeSuscripcion)}`);
-        klineWs.send(JSON.stringify(mensajeSuscripcion));
-      };
-      klineWs.onerror = (error) => {
-        mostrarError(`Error en WebSocket Kline para ${currentInterval}: ${JSON.stringify(error)}`);
-      };
-      klineWs.onclose = (evento) => {
-        wsConnectionCount = Math.max(0, wsConnectionCount - 1);
-        mostrarError(`WebSocket Kline cerrado para ${currentInterval}. Código: ${evento.code}, Razón: ${evento.reason || 'Desconocida'}. Reconectando...`);
-        document.getElementById("ws-status").textContent = `WebSocket: Reconectando (Intento ${klineRetryCount + 1}/${MAX_RETRIES})`;
-        limpiarWebSocketKline();
-        klineRetryCount++;
-        const retraso = Math.min(10000 * Math.pow(2, klineRetryCount), 60000);
-        console.log(`Reintentando conexión en ${retraso}ms (Intento ${klineRetryCount}/${MAX_RETRIES})`);
-        reconnectTimeout = setTimeout(setupKlineSocket, retraso);
-      };
-      klineWs.onmessage = (event) => {
-        try {
-          console.log(`Mensaje recibido (Kline ${currentInterval}): ${event.data}`);
-          const datos = JSON.parse(event.data);
-          if (datos.result === null && datos.id === 1) {
-            console.log(`Suscripción confirmada para ${symbol.toLowerCase()}@kline_${currentInterval}`);
-            return;
-          }
-          const vela = datos.k;
-          if (!vela) {
-            console.warn(`Mensaje de Kline sin datos de vela: ${JSON.stringify(datos)}`);
-            return;
-          }
-          const time = Math.floor(vela.t / 1000);
-          const open = parseFloat(vela.o);
-          const high = parseFloat(vela.h);
-          const low = parseFloat(vela.l);
-          const close = parseFloat(vela.c);
-          if (isNaN(time) || isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close)) {
-            console.warn(`Datos de vela inválidos: ${JSON.stringify(vela)}`);
-            return;
-          }
-          const candleData = { time, open, high, low, close };
-          if (!candlestickSeries) {
-            console.warn("candlestickSeries no está inicializada. Omitiendo actualización de velas.");
-            return;
-          }
-          const lastCandle = candlesData[candlesData.length - 1];
-          const intervalSeconds = currentInterval === '1d' ? 86400 :
-                                 currentInterval === '4h' ? 14400 :
-                                 currentInterval === '15m' ? 900 : 3600;
-          const now = Math.floor(Date.now() / 1000);
-          const candleEndTime = lastCandle ? lastCandle.time + intervalSeconds : now;
-          if (vela.x || (now >= candleEndTime)) {
-            if (lastCandle && lastCandle.time === time) {
-              candlestickSeries.update(candleData);
-            } else {
-              candlesData.push(candleData);
-              candlestickSeries.setData(candlesData);
-              const ema100 = calculateEMA(candlesData, 100);
-              if (emaSeries) {
-                emaSeries.setData(ema100);
-              }
-              if (candlesData.length > 150) {
-                candlesData.shift();
-                candlestickSeries.setData(candlesData);
-                const ema100 = calculateEMA(candlesData, 100);
-                if (emaSeries) {
-                  emaSeries.setData(ema100);
-                }
-              }
-            }
-            chart.timeScale().fitContent();
-          } else if (lastCandle && lastCandle.time === time) {
-            candlestickSeries.update(candleData);
-            const ema100 = calculateEMA(candlesData, 100);
-            if (emaSeries) {
-              emaSeries.setData(ema100);
-            }
-          }
-        } catch (err) {
-          mostrarError(`Error al procesar mensaje de Kline (${currentInterval}): ${err.message}`);
-        }
-      };
-    }
-
-    function limpiarWebSocketKline() {
-      if (klineWs) {
-        console.log('Limpiando WebSocket Kline');
-        klineWs.onopen = null;
-        klineWs.onmessage = null;
-        klineWs.onerror = null;
-        klineWs.onclose = null;
-        if (klineWs.readyState === WebSocket.OPEN || klineWs.readyState === WebSocket.CONNECTING) {
-          klineWs.close();
-        }
-        klineWs = null;
-        wsConnectionCount = Math.max(0, wsConnectionCount - 1);
-      }
-      if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout);
-        reconnectTimeout = null;
-      }
-      document.getElementById("ws-status").textContent = "WebSocket: Desconectado (Kline)";
-    }
-
-    function iniciarPollingRest() {
-      const intervaloPolling = setInterval(() => {
-        if (klineWs && klineWs.readyState === WebSocket.OPEN) {
-          clearInterval(intervaloPolling);
-          return;
-        }
-        fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${currentInterval}&limit=1`)
-          .then(respuesta => respuesta.json())
-          .then(datos => {
-            if (!datos || !datos.length) return;
-            const vela = datos[0];
-            const time = Math.floor(vela[0] / 1000);
-            const open = parseFloat(vela[1]);
-            const high = parseFloat(vela[2]);
-            const low = parseFloat(vela[3]);
-            const close = parseFloat(vela[4]);
-            if (isNaN(time) || isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close)) {
-              console.warn(`Datos de vela inválidos en polling: ${JSON.stringify(vela)}`);
-              return;
-            }
-            const candleData = { time, open, high, low, close };
-            if (!candlestickSeries) {
-              console.warn("candlestickSeries no está inicializada en polling.");
-              return;
-            }
-            const lastCandle = candlesData[candlesData.length - 1];
-            if (!lastCandle || lastCandle.time !== time) {
-              candlesData.push(candleData);
-              candlestickSeries.setData(candlesData);
-              const ema100 = calculateEMA(candlesData, 100);
-              if (emaSeries) {
-                emaSeries.setData(ema100);
-              }
-              if (candlesData.length > 150) {
-                candlesData.shift();
-                candlestickSeries.setData(candlesData);
-                const ema100 = calculateEMA(candlesData, 100);
-                if (emaSeries) {
-                  emaSeries.setData(ema100);
-                }
-              }
-            } else {
-              candlestickSeries.update(candleData);
-              const ema100 = calculateEMA(candlesData, 100);
-              if (emaSeries) {
-                emaSeries.setData(ema100);
-              }
-            }
-            chart.timeScale().fitContent();
-          })
-          .catch(err => {
-            mostrarError(`Error en polling REST: ${err.message}`);
-          });
-      }, 30000);
-    }
-
-    function cambiarIntervaloVelas() {
-      const nuevoIntervalo = document.getElementById("interval-select").value;
-      if (nuevoIntervalo === currentInterval) return;
-      currentInterval = nuevoIntervalo;
-      klineRetryCount = 0;
-      mostrarError("Cargando nuevo intervalo de velas...");
-      candlesData = [];
-      if (candlestickSeries) {
-        candlestickSeries.setData([]);
-      }
-      if (emaSeries) {
-        emaSeries.setData([]);
-      }
-      initializeChart();
-      loadHistoricalKlines().then(() => {
-        setupKlineSocket();
-        limpiarError();
-      }).catch((err) => {
-        mostrarError(`Error al cambiar intervalo: ${err.message}`);
-        setupKlineSocket();
-        setTimeout(limpiarError, 5000);
-      });
-    }
-
+    
+    // Autoajustar gráfico
     function autoScaleChart() {
       if (chart) {
         chart.timeScale().fitContent();
@@ -1341,171 +2019,359 @@
         });
       }
     }
-
+    
+    // Cargar datos históricos de velas
+    async function loadHistoricalKlines() {
+      try {
+        const loadingMsg = document.querySelector('.loading-message');
+        if (loadingMsg) loadingMsg.textContent = "Cargando datos históricos...";
+        
+        const response = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${currentInterval}&limit=150`);
+        if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+        
+        const data = await response.json();
+        candlesData = data.map(kline => ({
+          time: Math.floor(kline[0] / 1000),
+          open: parseFloat(kline[1]),
+          high: parseFloat(kline[2]),
+          low: parseFloat(kline[3]),
+          close: parseFloat(kline[4]),
+        }));
+        
+        if (candlestickSeries) {
+          candlestickSeries.setData(candlesData);
+          const ema100 = calculateEMA(candlesData, 100);
+          if (emaSeries) emaSeries.setData(ema100);
+          chart.timeScale().fitContent();
+          
+          const loadingMsg = document.querySelector('.loading-message');
+          if (loadingMsg) loadingMsg.style.display = 'none';
+        }
+      } catch (err) {
+        showError(`Error al cargar el historial de velas: ${err.message}`);
+        const loadingMsg = document.querySelector('.loading-message');
+        if (loadingMsg) loadingMsg.textContent = "Error cargando datos. Intentando reconectar...";
+        
+        setTimeout(loadHistoricalKlines, 5000);
+      }
+    }
+    
+    function calculateEMA(data, period) {
+      if (data.length < period) return [];
+      
+      const k = 2 / (period + 1);
+      const emaData = [];
+      let ema = data.slice(0, period).reduce((sum, candle) => sum + candle.close, 0) / period;
+      
+      emaData.push({ time: data[period - 1].time, value: ema });
+      
+      for (let i = period; i < data.length; i++) {
+        ema = (data[i].close * k) + (ema * (1 - k));
+        emaData.push({ time: data[i].time, value: ema });
+      }
+      
+      return emaData;
+    }
+    
+    // Manejo de líneas de precio seleccionadas
     function drawSelectedPriceLine(price, isAsk) {
-      if (!chart || !candlestickSeries) {
-        console.warn("Chart o candlestickSeries no están inicializados. No se puede dibujar la línea de precio.");
-        return;
-      }
-      if (isNaN(price)) {
-        console.error("Precio inválido:", price);
-        return;
-      }
+      if (!chart || !candlestickSeries) return;
+      
       const now = Math.floor(Date.now() / 1000);
       const lineSeries = chart.addLineSeries({
         color: isAsk ? '#ff0000' : '#00ff00',
-        lineWidth: 3,
+        lineWidth: 2,
         priceLineVisible: false,
         lastValueVisible: false,
       });
+      
       lineSeries.setData([
         { time: now - 86400, value: price },
         { time: now, value: price },
       ]);
+      
       lineSeries.createPriceLine({
         price: price,
         color: isAsk ? '#ff0000' : '#00ff00',
         lineWidth: 1,
         lineStyle: LightweightCharts.LineStyle.Dashed,
-        title: `Price: ${formatearPrecio(price)}`,
+        title: `${isAsk ? 'Ask' : 'Bid'}: ${formatPrice(price)}`,
       });
+      
       selectedPrices.set(price, { series: lineSeries, isAsk: isAsk });
-      guardarPreciosSeleccionados();
+      saveSelectedPrices();
     }
-
+    
     function removeSelectedPriceLine(price) {
-      if (!chart) {
-        console.warn("Chart no inicializado. No se puede eliminar la línea de precio.");
-        return;
-      }
+      if (!chart) return;
+      
       const priceData = selectedPrices.get(price);
       if (priceData && priceData.series) {
         try {
           chart.removeSeries(priceData.series);
         } catch (err) {
-          console.warn(`Error al remover serie para precio ${price}: ${err.message}`);
+          console.warn(`Error al remover serie: ${err.message}`);
         }
       }
+      
       selectedPrices.delete(price);
-      guardarPreciosSeleccionados();
+      saveSelectedPrices();
     }
-
+    
     function redrawSelectedLines() {
-      if (!chart) {
-        console.warn("Chart no inicializado. No se pueden redibujar las líneas seleccionadas.");
-        return;
-      }
+      if (!chart) return;
+      
       const pricesToRedraw = new Map(selectedPrices);
       selectedPrices.clear();
+      
       pricesToRedraw.forEach((data, price) => {
         if (data.series) {
           try {
             chart.removeSeries(data.series);
           } catch (err) {
-            console.warn(`Error al remover serie para precio ${price} durante redibujado: ${err.message}`);
+            console.warn(`Error al remover serie: ${err.message}`);
           }
         }
-        if (asksPriceMap.has(price) || bidsPriceMap.has(price)) {
-          const isAsk = asksPriceMap.has(price);
+        
+        if (futuresAsksData.some(order => order.price === price) || 
+            futuresBidsData.some(order => order.price === price)) {
+          const isAsk = futuresAsksData.some(order => order.price === price);
           drawSelectedPriceLine(price, isAsk);
         }
       });
     }
-
-    window.addEventListener('resize', () => {
-      if (chart) {
-        chart.resize(document.getElementById("chart-container").offsetWidth, 500);
-        redrawSelectedLines();
-      }
-    });
-
-    function alternarSeleccionPrecio(precio, esAsk, checkbox) {
-      console.log(`Alternando precio: ${precio}, esAsk: ${esAsk}, checked: ${checkbox.checked}`);
+    
+    function togglePriceSelection(price, isAsk, checkbox) {
+      startInteraction();
+  
       if (checkbox.checked) {
-        if (!selectedPrices.has(precio)) {
-          drawSelectedPriceLine(precio, esAsk);
-          if (esAsk) {
-            asksPriceMap.set(precio, true);
+        if (!selectedPrices.has(price)) {
+          drawSelectedPriceLine(price, isAsk);
+          if (isAsk) {
+            asksPriceMap.set(price, true);
           } else {
-            bidsPriceMap.set(precio, true);
+            bidsPriceMap.set(price, true);
           }
-          console.log(`Precio añadido: ${precio}`);
         }
       } else {
-        if (selectedPrices.has(precio)) {
-          removeSelectedPriceLine(precio);
-          asksPriceMap.delete(precio);
-          bidsPriceMap.delete(precio);
-          console.log(`Precio eliminado: ${precio}`);
+        if (selectedPrices.has(price)) {
+          removeSelectedPriceLine(price);
+          asksPriceMap.delete(price);
+          bidsPriceMap.delete(price);
         }
       }
-      actualizarTablas();
+  
+      updateTables();
+  
+  // Pequeño retraso antes de terminar la interacción para permitir selecciones múltiples
+      setTimeout(endInteraction, 300);
     }
-
-    function actualizarContadoresProcesados() {
-      asksProcessed = spotAsksProcessed + futuresAsksProcessed;
-      bidsProcessed = spotBidsProcessed + futuresBidsProcessed;
-      const totalPrecios = asksProcessed + bidsProcessed;
-      document.getElementById("total-prices").innerText = totalPrecios.toLocaleString();
-      document.getElementById("asks-processed").innerText = asksProcessed.toLocaleString();
-      document.getElementById("bids-processed").innerText = bidsProcessed.toLocaleString();
-      if (totalPrecios >= 1000000) {
-        document.getElementById("total-prices").classList.add("highlight-total");
-      } else {
-        document.getElementById("total-prices").classList.remove("highlight-total");
-      }
-      const indicadorAsksInicio = document.getElementById("asks-indicator-start");
-      const indicadorAsksFin = document.getElementById("asks-indicator-end");
-      const indicadorBidsInicio = document.getElementById("bids-indicator-start");
-      const indicadorBidsFin = document.getElementById("bids-indicator-end");
-      indicadorAsksInicio.classList.remove("circle-red", "circle-green");
-      indicadorAsksFin.classList.remove("circle-red", "circle-green");
-      indicadorBidsInicio.classList.remove("circle-red", "circle-green");
-      indicadorBidsFin.classList.remove("circle-red", "circle-green");
-      if (asksProcessed > bidsProcessed) {
-        indicadorAsksInicio.classList.add("circle-red");
-        indicadorAsksFin.classList.add("circle-red");
-      } else if (bidsProcessed > asksProcessed) {
-        indicadorBidsInicio.classList.add("circle-green");
-        indicadorBidsFin.classList.add("circle-green");
-      }
-      programarActualizacionTabla();
+    
+    function saveSelectedPrices() {
+      const prices = Array.from(selectedPrices.keys());
+      localStorage.setItem(`selectedPrices_${symbol}`, JSON.stringify(prices));
     }
-
+    
+    // Cambiar intervalo del gráfico
+    function changeChartInterval() {
+      const newInterval = document.getElementById("interval-select").value;
+      if (newInterval === currentInterval) return;
+      
+      currentInterval = newInterval;
+      localStorage.setItem('chartInterval', currentInterval);
+      
+      showError("Cambiando intervalo de velas...");
+      candlesData = [];
+      
+      if (candlestickSeries) {
+        candlestickSeries.setData([]);
+      }
+      
+      if (emaSeries) {
+        emaSeries.setData([]);
+      }
+      
+      initializeKlineSocket();
+      loadHistoricalKlines().then(() => {
+        clearError();
+      }).catch((err) => {
+        showError(`Error al cambiar intervalo: ${err.message}`);
+        setTimeout(clearError, 5000);
+      });
+    }
+    
+    // Cargar pares de criptomonedas
     async function loadCryptoPairs() {
       try {
-        const response = await fetch('https://api.binance.com/api/v3/exchangeInfo');
-        if (!response.ok) throw new Error('Error al obtener pares de intercambio');
+        const response = await fetch('https://fapi.binance.com/fapi/v1/exchangeInfo');
+        if (!response.ok) throw new Error('Error al obtener pares de futuros');
+        
         const data = await response.json();
         const datalist = document.getElementById('symbol-list');
         const validPairs = data.symbols
           .filter(s => s.status === 'TRADING' && s.quoteAsset === 'USDT')
           .map(s => s.symbol);
+        
+        datalist.innerHTML = '';
         validPairs.forEach(pair => {
           const option = document.createElement('option');
           option.value = pair;
           datalist.appendChild(option);
         });
-        console.log(`Pares USDT cargados: ${validPairs.length}`);
       } catch (err) {
-        console.error('Error al cargar los pares de criptomonedas:', err);
-        document.getElementById('error-message').textContent = `Error al cargar los pares: ${err.message}`;
+        console.error('Error al cargar pares:', err);
+        showError(`Error al cargar pares: ${err.message}`);
       }
     }
-
-    document.getElementById('symbol-search').addEventListener('change', (e) => {
-      const selectedSymbol = e.target.value.toUpperCase();
-      if (selectedSymbol) {
-        window.location.href = `?symbol=${selectedSymbol}`;
+    
+    // Manejo de errores
+    function showError(message) {
+      errorMessageElement.textContent = message;
+      console.error(message);
+    }
+    
+    function clearError() {
+      errorMessageElement.textContent = "";
+    }
+    
+    function updateWsStatus(message) {
+      const statusElement = document.getElementById("ws-status");
+      if (statusElement) {
+        statusElement.textContent = message;
+        
+        const spinner = statusElement.querySelector('.spinner');
+        if (spinner) {
+          spinner.style.display = message.includes('Conectado') ? 'none' : 'inline-block';
+        }
       }
-    });
-
-    configurarEventos();
-    setInterval(actualizarTimestamp, 50);
-    initializeChart();
-    loadHistoricalKlines();
-    setupKlineSocket();
-    loadCryptoPairs();
+    }
+    
+    // Configurar eventos
+    function setupEventListeners() {
+      const asksBody = document.getElementById("asks-body");
+      const bidsBody = document.getElementById("bids-body");
+      
+      if (asksBody) {
+        asksBody.addEventListener('click', handleTableClick);
+        asksBody.addEventListener('mousedown', handleTableMouseDown);
+      }
+      
+      if (bidsBody) {
+        bidsBody.addEventListener('click', handleTableClick);
+        bidsBody.addEventListener('mousedown', handleTableMouseDown);
+      }
+      
+      document.getElementById('symbol-search').addEventListener('change', (e) => {
+        const selectedSymbol = e.target.value.toUpperCase();
+        if (selectedSymbol) {
+          window.location.href = `?symbol=${selectedSymbol}`;
+        }
+      });
+      
+      document.getElementById('interval-select').addEventListener('change', changeChartInterval);
+      
+      window.addEventListener('resize', () => {
+        if (chart) {
+          chart.resize(document.getElementById("chart-container").offsetWidth, 500);
+          redrawSelectedLines();
+        }
+      });
+    }
+    
+    function handleTableMouseDown(event) {
+      const cell = event.target.closest('.price-cell');
+      if (!cell) return;
+      
+      const span = cell.querySelector('span');
+      if (!span) return;
+      
+      const selection = window.getSelection();
+      if (!selection.toString()) {
+        const range = document.createRange();
+        range.selectNodeContents(span);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      
+      event.preventDefault();
+    }
+    
+    function handleTableClick(event) {
+      const cell = event.target.closest('.price-cell');
+      if (!cell) return;
+      
+      copyPriceCell({target: cell});
+    }
+    
+    function copyPriceCell(event) {
+      const cell = event.target.closest('.price-cell');
+      if (!cell) return;
+      
+      const text = cell.textContent.trim();
+      if (!text) return;
+      
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+          cell.classList.add("copied");
+          setTimeout(() => cell.classList.remove("copied"), 500);
+          isInteracting = false;
+        }).catch(err => {
+          console.error("Error al copiar:", err);
+          copyWithFallback(text, cell);
+        });
+      } else {
+        copyWithFallback(text, cell);
+      }
+      
+      event.preventDefault();
+    }
+    
+    function copyWithFallback(text, cell) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        document.execCommand('copy');
+        cell.classList.add("copied");
+        setTimeout(() => cell.classList.remove("copied"), 500);
+        isInteracting = false;
+      } catch (err) {
+        console.error("Error al copiar con fallback:", err);
+      } finally {
+        document.body.removeChild(textArea);
+      }
+    }
+    
+    // Inicialización
+    function init() {
+      loadSelectedPrices();
+      setupEventListeners();
+      initializeWebSockets();
+      setInterval(updateTimestamp, 1000);
+      loadCryptoPairs();
+      initAlerts();
+      
+      // Exponer funciones globales
+      window.startInteraction = startInteraction;
+      window.endInteraction = endInteraction;
+      window.togglePriceSelection = togglePriceSelection;
+      window.togglePriceSelection = togglePriceSelection;
+      window.autoScaleChart = autoScaleChart;
+      window.updateThresholds = updateThresholds;
+      window.toggleSoundAlerts = toggleSoundAlerts;
+      window.showLiquidityClusters = showLiquidityClusters;
+      window.toggleLiquidityHeatmap = toggleLiquidityHeatmap;
+      window.saveKeyLevels = saveKeyLevels;
+      window.copyPriceCell = copyPriceCell;
+    }
+    
+    // Iniciar la aplicación
+    document.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>
