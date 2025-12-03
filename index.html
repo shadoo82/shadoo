@@ -15,9 +15,6 @@
       --bid-color: #55ff55;
       --highlight-ask: rgba(249, 12, 12, 0.5);
       --highlight-bid: rgba(0, 255, 0, 0.5);
-      --color-blue: #090ef5;
-      --color-yellow: #e0f30a;
-      --color-orange: #f5550f;
       --color-purple: #9c27b0;
     }
     
@@ -277,42 +274,13 @@
     
     tr:hover { background-color: #3a3a3a; }
     
-    .highlight-top {
-      background-color: rgba(255, 255, 0, 0.2);
-      color: var(--text-color);
+    .bold-row td {
       font-weight: bold;
     }
     
     .color-transparent {
       background-color: transparent;
       transition: background-color 0.2s ease-out, color 0.2s ease-out;
-    }
-    
-    .color-blue {
-      background-color: var(--color-blue);
-      transition: background-color 0.2s ease-out, color 0.2s ease-out;
-    }
-    
-    .color-blue td {
-      color: var(--text-color);
-    }
-    
-    .color-yellow {
-      background-color: var(--color-yellow);
-      transition: background-color 0.2s ease-out, color 0.2s ease-out;
-    }
-    
-    .color-yellow td {
-      color: #000000;
-    }
-    
-    .color-orange {
-      background-color: var(--color-orange);
-      transition: background-color 0.2s ease-out, color 0.2s ease-out;
-    }
-    
-    .color-orange td {
-      color: #000000;
     }
     
     .color-purple {
@@ -322,10 +290,6 @@
     
     .color-purple td {
       color: var(--text-color);
-    }
-    
-    .bold-row td {
-      font-weight: bold;
     }
     
     .highlight-red {
@@ -406,9 +370,16 @@
     
     .selection-checkbox {
       cursor: pointer;
-      accent-color: var(--bid-color);
       width: 12px;
       height: 12px;
+    }
+    
+    .selection-checkbox:checked {
+      accent-color: var(--ask-color);
+    }
+    
+    #bids-body .selection-checkbox:checked {
+      accent-color: var(--bid-color);
     }
     
     .selection-checkbox:active {
@@ -711,6 +682,94 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+
+    /* ========== ESTILOS PARA CLUSTERS ========== */
+    .tradingview-lightweight-charts-marker-tooltip {
+      font-family: 'Courier New', monospace !important;
+      font-size: 10px !important;
+      background: rgba(40, 40, 40, 0.95) !important;
+      border: 1px solid #444 !important;
+      border-radius: 4px !important;
+      padding: 4px 6px !important;
+      line-height: 1.4 !important;
+      white-space: nowrap !important;
+      color: #FFFFFF !important;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+    }
+
+    /* Contenedor de alertas */
+    #alert-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      max-width: 300px;
+      z-index: 1000;
+    }
+
+    /* Alertas individuales */
+    .market-alert {
+      padding: 10px 15px;
+      margin: 8px 0;
+      background: var(--panel-color);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      animation: fadeIn 0.3s ease;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+
+    .alert-time {
+      color: var(--text-secondary);
+      font-size: 10px;
+      margin-right: 10px;
+    }
+
+    .alert-icon {
+      font-size: 16px;
+      margin-right: 10px;
+      font-weight: bold;
+    }
+
+    .alert-message {
+      flex-grow: 1;
+      font-size: 12px;
+    }
+
+    .alert-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 16px;
+      margin-left: 10px;
+    }
+
+    /* Animaciones */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-out {
+      animation: fadeOut 0.5s ease forwards;
+    }
+
+    @keyframes fadeOut {
+      to { opacity: 0; transform: translateY(10px); }
+    }
+    .selected-column {
+      cursor: pointer;
+      padding: 10px !important;
+      user-select: none;
+    }
+
+    .selected-column input.selection-checkbox {
+      pointer-events: none;
+    }
+
+
+
+    
   </style>
   <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
 </head>
@@ -811,7 +870,7 @@
         </div>
         <div>
           <button class="liquidity-btn" onclick="toggleSoundAlerts()" id="sound-toggle">🔊 Sonido: ON</button>
-          <button class="liquidity-btn" onclick="showLiquidityClusters()">Mostrar Clusters</button>
+          <button class="liquidity-btn" onclick="toggleClusters()" id="cluster-toggle">📊 Mostrar Clusters</button>
           <button class="liquidity-btn" onclick="toggleLiquidityHeatmap()">Heatmap</button>
           <button class="liquidity-btn" onclick="saveKeyLevels()">Guardar Niveles</button>
         </div>
@@ -849,9 +908,6 @@
       
       <div class="legend">
         <div class="legend-row" style="background-color: var(--highlight-ask) !important; color: var(--text-color) !important;">Ask actualizado (Venta)</div>
-        <div class="legend-row" style="background-color: var(--color-blue) !important; color: var(--text-color) !important;">Asks 0.5%-1% del markPrice</div>
-        <div class="legend-row" style="background-color: var(--color-yellow) !important; color: #000000 !important;">Asks 0.1%-0.5% del markPrice</div>
-        <div class="legend-row" style="background-color: var(--color-orange) !important; color: #000000 !important;">Asks &lt;0.1% del markPrice</div>
         <div class="legend-row" style="background-color: var(--color-purple) !important; color: var(--text-color) !important;">Órdenes institucionales</div>
       </div>
     </div>
@@ -882,9 +938,6 @@
       
       <div class="legend">
         <div class="legend-row bid-updated-legend" style="background-color: var(--bid-color) !important; color: #000000 !important;">Bid actualizado (Compra)</div>
-        <div class="legend-row" style="background-color: var(--color-blue) !important; color: var(--text-color) !important;">Bids 0.5%-1% del markPrice</div>
-        <div class="legend-row" style="background-color: var(--color-yellow) !important; color: #000000 !important;">Bids 0.1%-0.5% del markPrice</div>
-        <div class="legend-row" style="background-color: var(--color-orange) !important; color: #000000 !important;">Bids &lt;0.1% del markPrice</div>
         <div class="legend-row" style="background-color: var(--color-purple) !important; color: var(--text-color) !important;">Órdenes institucionales</div>
       </div>
     </div>
@@ -934,6 +987,9 @@
     let heatmapEnabled = false;
     let reconnectAttempts = 0;
     const MAX_RECONNECT_ATTEMPTS = 5;
+    let clustersVisible = false;
+    let currentMarkers = [];
+    let currentPriceLines = [];
     
     // Configuración de alertas
     const ALERT_SETTINGS = {
@@ -1175,7 +1231,6 @@
     
     // Mostrar alerta visual para órdenes institucionales
     function showOrderAlert(type, value, isVeryLarge) {
-      // Crear elemento de alerta en el panel
       const panelTitle = document.querySelector(`.${type}s-title`);
       if (!panelTitle) return;
       
@@ -1188,26 +1243,22 @@
       
       panel.appendChild(alertElement);
       
-      // Eliminar alerta anterior si existe
       if (lastAlertElement && lastAlertElement.parentNode) {
         lastAlertElement.remove();
       }
       
       lastAlertElement = alertElement;
       
-      // Reproducir sonido si está habilitado
       if (ALERT_SETTINGS.soundEnabled) {
         playAlertSound(isVeryLarge ? 'volume' : 'default');
       }
       
-      // Eliminar después de 5 segundos
       setTimeout(() => {
         if (alertElement && alertElement.parentNode) {
           alertElement.remove();
         }
       }, 5000);
       
-      // Añadir alerta al gráfico si es muy grande (>100M)
       if (isVeryLarge && chart) {
         const price = type === 'ask' 
           ? futuresAsksData.find(a => a.usdt === value)?.price 
@@ -1235,7 +1286,6 @@
       
       candlestickSeries.setMarkers([marker]);
       
-      // Eliminar el marcador después de 30 segundos
       setTimeout(() => {
         candlestickSeries.setMarkers([]);
       }, 30000);
@@ -1275,7 +1325,6 @@
         }
       });
       
-      // Filtrar y ordenar por liquidez (USDT value)
       return Array.from(orderMap.values())
         .filter(order => order.usdt > 100)
         .sort((a, b) => b.usdt - a.usdt)
@@ -1288,14 +1337,14 @@
       updateTable("bids-body", futuresBidsData, false);
     }
     
-    // Actualizar una tabla específica
+    // Actualizar una tabla específica (versión simplificada)
     function updateTable(tableId, data, isAsk) {
       const tableBody = document.getElementById(tableId);
       if (!tableBody) return;
-      
+
       const now = Date.now();
       const existingRows = new Map();
-      
+
       Array.from(tableBody.children).forEach(row => {
         const priceCell = row.querySelector('.price-cell');
         if (priceCell) {
@@ -1303,72 +1352,57 @@
           existingRows.set(price, row);
         }
       });
-      
+
       const fragment = document.createDocumentFragment();
-      
+
       data.forEach((item, index) => {
         const age = formatAge(now - item.lastUpdated);
-        const percentage = markPriceFutures ? 
-          (((item.price - markPriceFutures) / markPriceFutures) * 100).toFixed(3) + "%" : 
+        const percentage = markPriceFutures ?
+          (((item.price - markPriceFutures) / markPriceFutures) * 100).toFixed(3) + "%" :
           "---";
-        
+
         let row = existingRows.get(item.price);
-        
+
         if (!row) {
           row = document.createElement("tr");
           row.className = isAsk ? "ask-row" : "bid-row";
         }
-        
+
         if (index < 5) {
-          row.classList.add("highlight-top");
-        } else {
-          row.classList.remove("highlight-top");
-        }
-        
-        // Añadir clase especial para órdenes institucionales
-        if (item.usdt >= LARGE_ORDER_THRESHOLD) {
-          row.classList.add("color-purple");
-        } else {
-          const newColorClass = getColorClass(item, now);
-          row.classList.remove("color-transparent", "color-blue", "color-yellow", "color-orange", "color-purple");
-          row.classList.add(newColorClass);
-          rowColors.set(item.price, newColorClass);
-        }
-        
-        if (item.usdt >= LARGE_ORDER_THRESHOLD || getColorClass(item, now) !== "color-transparent") {
           row.classList.add("bold-row");
         } else {
           row.classList.remove("bold-row");
         }
-        
+
+        if (item.usdt >= LARGE_ORDER_THRESHOLD) {
+          row.classList.add("color-purple");
+          row.classList.add("bold-row");
+        } else {
+          row.classList.remove("color-purple");
+        }
+
         const recentlyUpdated = item.lastUpdated && (now - item.lastUpdated) <= 1000;
         if (recentlyUpdated) {
           const highlightClass = isAsk ? "highlight-red" : "highlight-green";
           row.classList.remove("highlight-red", "highlight-green");
           row.classList.add(highlightClass);
-          
+
           setTimeout(() => {
             row.classList.remove("highlight-red", "highlight-green");
-            const updatedColorClass = getColorClass(item, Date.now());
-            row.classList.remove("color-transparent", "color-blue", "color-yellow", "color-orange", "color-purple");
-            row.classList.add(updatedColorClass);
-            rowColors.set(item.price, updatedColorClass);
-            
-            if (updatedColorClass !== "color-transparent" || item.usdt >= LARGE_ORDER_THRESHOLD) {
+            if (item.usdt >= LARGE_ORDER_THRESHOLD) {
+              row.classList.add("color-purple");
               row.classList.add("bold-row");
-            } else {
-              row.classList.remove("bold-row");
             }
           }, 1000);
         }
-        
+
         const isSelected = selectedPrices.has(item.price);
         if (isSelected) {
           row.classList.add("selected-row");
         } else {
           row.classList.remove("selected-row");
         }
-        
+
         row.innerHTML = `
           <td><span>${index + 1}</span></td>
           <td class="age-cell"><span>${age}</span></td>
@@ -1377,21 +1411,17 @@
           <td><span>${formatUsdt(item.usdt)}</span></td>
           <td><span>${percentage}</span></td>
           <td><span>${item.hits}</span></td>
-          <td class="selected-column">
-            <input type="checkbox" class="selection-checkbox" ${isSelected ? 'checked' : ''} 
-            onchange="togglePriceSelection(${item.price}, ${isAsk}, this)"
-            onmouseenter="startInteraction()" 
-            onmouseleave="endInteraction()"
-            onfocus="startInteraction()"
-            onblur="endInteraction()"
-            aria-label="${isSelected ? 'Deseleccionar' : 'Seleccionar'} precio ${formatPrice(item.price)}">
-        </td>
-      `;
-        
+          <td class="selected-column"
+              onclick="handleSelectClick(event, ${item.price}, ${isAsk})">
+            <input type="checkbox" class="selection-checkbox" ${isSelected ? 'checked' : ''}>
+          </td>
+
+        `;
+
         fragment.appendChild(row);
         existingRows.delete(item.price);
       });
-      
+
       existingRows.forEach(row => {
         const priceCell = row.querySelector('.price-cell');
         if (priceCell) {
@@ -1400,58 +1430,37 @@
         }
         row.remove();
       });
-      
+
       tableBody.innerHTML = '';
       tableBody.appendChild(fragment);
-      
+
       redrawSelectedLines();
     }
     
-    // Obtener clase de color basada en la proximidad al mark price
+    // Función simplificada para colores
     function getColorClass(item, now) {
-      if (!markPriceFutures || markPriceFutures === 0) return "color-transparent";
-      
-      const difference = ((item.price - markPriceFutures) / markPriceFutures) * 100;
-      const absoluteDifference = Math.abs(difference);
-      const colorAge = now - item.colorAssignedTime;
-      
-      if (colorAge > COLOR_DURATION_MS) {
-        return "color-transparent";
+      if (item.usdt >= LARGE_ORDER_THRESHOLD) {
+        return "color-purple";
       }
-      
-      if (absoluteDifference <= 0.1) {
-        return "color-orange";
-      } else if (absoluteDifference > 0.1 && absoluteDifference <= 0.5) {
-        return "color-yellow";
-      } else if (absoluteDifference > 0.5 && absoluteDifference <= 1) {
-        return "color-blue";
-      }
-      
       return "color-transparent";
     }
     
     // Programar actualización de tablas con debounce
     function scheduleTableUpdate() {
-      if (!pendingUpdate && !updatePaused) {
+      if (isInteracting) return;
+
+      if (!pendingUpdate) {
         pendingUpdate = true;
         setTimeout(() => {
-          updateTables();
+          if (!isInteracting) {
+            updateTables();
+          }
           pendingUpdate = false;
-        }, 100);
+        }, 150);
       }
     }
 
-    // Funciones de manejo de interacción
-    function startInteraction() {
-  isInteracting = true;
-  updatePaused = true;
-    }
-
-    function endInteraction() {
-  isInteracting = false;
-  updatePaused = false;
-  scheduleTableUpdate(); // Forzar actualización al terminar la interacción
-    }
+   
     
     // Actualizar contadores de órdenes procesadas
     function updateProcessedCounters() {
@@ -1514,10 +1523,8 @@
         const imbalance = ((totalBidLiquidity - totalAskLiquidity) / totalLiquidity) * 100;
         document.getElementById("orderbook-imbalance").textContent = `${imbalance.toFixed(2)}%`;
         
-        // Actualizar indicador visual
         const indicator = document.getElementById("imbalance-indicator");
         if (indicator) {
-          // Mapear de -100% a +100% a 0% a 100% para la posición
           const position = (imbalance + 100) / 2;
           indicator.style.left = `${position}%`;
         }
@@ -1553,59 +1560,232 @@
     
     // Mostrar clusters de liquidez
     function showLiquidityClusters() {
-      if (liquidityHistory.length < 2) return;
-      
-      // Agrupar órdenes por niveles de precio redondeados
+      if (liquidityHistory.length < 3) return;
+
       const priceLevels = {};
-      const priceStep = markPriceFutures * 0.001; // 0.1% del precio actual
-      
-      liquidityHistory.forEach(snapshot => {
+      const priceStep = markPriceFutures * 0.002; // Agrupa precios dentro del 0.2%
+
+      liquidityHistory.slice(-10).forEach(snapshot => {
         [...snapshot.bids, ...snapshot.asks].forEach(order => {
-          const roundedPrice = Math.round(order.price / priceStep) * priceStep;
+          const roundedPrice = (Math.round(order.price / priceStep) * priceStep).toFixed(2);
           if (!priceLevels[roundedPrice]) {
             priceLevels[roundedPrice] = {
               totalUsdt: 0,
               count: 0,
-              lastSeen: 0
+              type: order.price <= markPriceFutures ? 'bid' : 'ask'
             };
           }
           priceLevels[roundedPrice].totalUsdt += order.usdt;
           priceLevels[roundedPrice].count++;
-          priceLevels[roundedPrice].lastSeen = Math.max(priceLevels[roundedPrice].lastSeen, snapshot.time);
         });
       });
-      
-      // Filtrar y ordenar los clusters más significativos
+
       const significantClusters = Object.entries(priceLevels)
-        .filter(([_, data]) => data.totalUsdt >= LARGE_ORDER_THRESHOLD)
-        .sort((a, b) => b[1].totalUsdt - a[1].totalUsdt)
-        .slice(0, 5);
+        .filter(([_, data]) => data.totalUsdt >= LARGE_ORDER_THRESHOLD * 0.5)
+        .sort((a, b) => b[1].totalUsdt - a[1].totalUsdt);
+
+      drawClustersOnChart(significantClusters);
+    }
+    
+    // Función para dibujar clusters en el gráfico
+    function drawClustersOnChart(clusters) {
+      clearClusters();
+      if (!chart || !candlestickSeries || !markPriceFutures) return;
+
+      // Agrupar clusters cercanos para evitar saturación
+      const groupedClusters = groupNearbyClusters(clusters);
       
-      // Mostrar alerta con los clusters encontrados
-      if (significantClusters.length > 0) {
-        const alertText = significantClusters.map(
-          ([price, data]) => `${formatPrice(parseFloat(price))}: ${formatUsdt(data.totalUsdt)} (${data.count}x)`
-        ).join('\n');
-        
-        alert("Clusters de liquidez significativos:\n" + alertText);
-        
-        // Dibujar los clusters en el gráfico
-        if (chart) {
-          const now = Math.floor(Date.now() / 1000);
-          const markers = significantClusters.map(([price, _]) => ({
-            time: now,
-            position: 'inBar',
-            color: '#9c27b0',
-            shape: 'square',
-            text: 'Cluster',
-            size: 2
-          }));
-          
-          candlestickSeries.setMarkers(markers);
-          setTimeout(() => candlestickSeries.setMarkers([]), 10000);
+      // Limpiar líneas anteriores
+      currentPriceLines.forEach(line => {
+        try {
+          chart.removeSeries(line.series);
+        } catch (err) {
+          console.warn(`Error al remover serie: ${err.message}`);
         }
+      });
+      currentPriceLines = [];
+      
+      // Enfocarnos solo en las zonas de mayor volumen cercanas al precio actual
+      const currentPriceThreshold = markPriceFutures * 0.05; // ±5% del precio actual
+      const filteredClusters = groupedClusters.filter(cluster => 
+        Math.abs(cluster.avgPrice - markPriceFutures) <= currentPriceThreshold
+      );
+      
+      // Ordenar por volumen descendente y tomar solo los 3 más grandes
+      const topClusters = filteredClusters
+        .sort((a, b) => b.totalUsdt - a.totalUsdt)
+        .slice(0, 3);
+      
+      // Dibujar líneas horizontales para los clusters
+      const now = Math.floor(Date.now() / 1000);
+      
+      topClusters.forEach(cluster => {
+        const isBid = cluster.type === 'bid';
+        const lineSeries = chart.addLineSeries({
+          color: isBid ? 'rgba(255, 0, 255, 1)' : 'rgba(255, 0, 255, 1)', // Verde claro para bids, rojo claro para asks
+          lineWidth: 2, // Línea más fina
+          priceLineVisible: false,
+          lastValueVisible: false,
+          lineStyle: LightweightCharts.LineStyle.Solid
+        });
+        
+        // Línea en todo el gráfico
+        lineSeries.setData([
+          { time: now - 86400, value: cluster.avgPrice }, // 1 día atrás
+          { time: now, value: cluster.avgPrice }
+        ]);
+        
+        // Agregar etiqueta de precio
+        const priceLine = {
+          price: cluster.avgPrice,
+          color: isBid ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)',
+          lineWidth: 1,
+          lineStyle: LightweightCharts.LineStyle.Solid,
+          title: `${formatPrice(cluster.avgPrice)} | ${formatUsdt(cluster.totalUsdt)}`,
+          axisLabelVisible: true,
+          axisLabelColor: isBid ? 'rgba(0, 255, 0, 0.7)' : 'rgba(255, 0, 0, 0.7)',
+          axisLabelTextColor: '#ffffff'
+        };
+        
+        lineSeries.createPriceLine(priceLine);
+        currentPriceLines.push({ series: lineSeries, price: cluster.avgPrice });
+      });
+    }
+
+    // Modificación para el hover del checkbox
+    function setupEventListeners() {
+      const asksBody = document.getElementById("asks-body");
+      const bidsBody = document.getElementById("bids-body");
+
+      const bindTable = (tbody) => {
+        if (!tbody) return;
+
+        // Evita duplicar listeners si init() se dispara más de una vez
+        if (tbody.dataset.bound === "1") return;
+        tbody.dataset.bound = "1";
+
+        // 1) Click: si clicas checkbox NO copies precio.
+        //    Si clicas en price-cell => copiar.
+        tbody.addEventListener("click", (e) => {
+          
+          const priceCell = e.target.closest(".price-cell");
+          if (priceCell) {
+            handleTableClick(e); // tu función ya llama a copyPriceCell
+          }
+        });
+
+        // 2) MouseDown en price-cell: selecciona texto para copiar rápido
+        tbody.addEventListener("mousedown", (e) => {
+          const priceCell = e.target.closest(".price-cell");
+          if (!priceCell) return;
+          handleTableMouseDown(e);
+        });
+
+        // 3) Hover checkbox: realmente no hace falta si no bloqueas pointer-events,
+        //    pero lo dejamos por compatibilidad con tu idea.
+        tbody.addEventListener("mouseover", (e) => {
+          const checkbox = e.target.closest('.selected-column input[type="checkbox"]');
+          if (checkbox) checkbox.style.pointerEvents = "auto";
+        });
+      };
+
+      bindTable(asksBody);
+      bindTable(bidsBody);
+
+      const symbolSearch = document.getElementById("symbol-search");
+      if (symbolSearch && !symbolSearch.dataset.bound) {
+        symbolSearch.dataset.bound = "1";
+        symbolSearch.addEventListener("change", (e) => {
+          const selectedSymbol = (e.target.value || "").toUpperCase().trim();
+          if (selectedSymbol) window.location.href = `?symbol=${selectedSymbol}`;
+        });
+      }
+
+      const intervalSelect = document.getElementById("interval-select");
+      if (intervalSelect && !intervalSelect.dataset.bound) {
+        intervalSelect.dataset.bound = "1";
+        intervalSelect.addEventListener("change", changeChartInterval);
+      }
+
+      if (!window.__resizeBound) {
+        window.__resizeBound = true;
+        window.addEventListener("resize", () => {
+          if (!chart) return;
+          chart.resize(document.getElementById("chart-container").offsetWidth, 500);
+          redrawSelectedLines();
+        });
+      }
+    }
+
+    // Agrupa clusters cercanos para evitar saturación visual
+    function groupNearbyClusters(clusters) {
+      if (clusters.length === 0) return [];
+      
+      const priceStep = markPriceFutures * 0.002; // Agrupa precios dentro del 0.2%
+      const grouped = [];
+      
+      // Ordenar por precio
+      clusters.sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]));
+      
+      let currentGroup = null;
+      
+      clusters.forEach(([price, data]) => {
+        const priceNum = parseFloat(price);
+        
+        if (!currentGroup || priceNum - currentGroup.maxPrice > priceStep) {
+          // Nuevo grupo
+          currentGroup = {
+            prices: [priceNum],
+            totalUsdt: data.totalUsdt,
+            count: 1,
+            type: data.type,
+            minPrice: priceNum,
+            maxPrice: priceNum
+          };
+          grouped.push(currentGroup);
+        } else {
+          // Agregar al grupo existente
+          currentGroup.prices.push(priceNum);
+          currentGroup.totalUsdt += data.totalUsdt;
+          currentGroup.count++;
+          currentGroup.maxPrice = priceNum;
+        }
+      });
+      
+      // Calcular promedio para cada grupo
+      return grouped.map(group => ({
+        avgPrice: group.prices.reduce((sum, p) => sum + p, 0) / group.prices.length,
+        totalUsdt: group.totalUsdt,
+        type: group.type,
+        count: group.count
+      }));
+    }
+
+    // Función para limpiar clusters
+    function clearClusters() {
+      if (candlestickSeries) candlestickSeries.setMarkers([]);
+      currentMarkers = [];
+      
+      currentPriceLines.forEach(line => {
+        try {
+          chart.removeSeries(line.series);
+        } catch (err) {
+          console.warn(`Error al remover serie: ${err.message}`);
+        }
+      });
+      currentPriceLines = [];
+    }
+
+    // Función para alternar clusters
+    function toggleClusters() {
+      clustersVisible = !clustersVisible;
+      const button = document.getElementById('cluster-toggle');
+      button.textContent = clustersVisible ? '❌ Ocultar Clusters' : '📊 Mostrar Clusters';
+      
+      if (clustersVisible) {
+        showLiquidityClusters();
       } else {
-        alert("No se encontraron clusters de liquidez significativos");
+        clearClusters();
       }
     }
     
@@ -1614,7 +1794,6 @@
       heatmapEnabled = !heatmapEnabled;
       
       if (heatmapEnabled && chart) {
-        // Crear series de heatmap
         const heatmapSeries = chart.addHeatmapSeries({
           colorScale: [
             { color: 'rgba(0, 0, 255, 0.1)', offset: 0 },
@@ -1624,7 +1803,6 @@
           radius: 10
         });
         
-        // Preparar datos para el heatmap
         const heatmapData = [];
         const now = Math.floor(Date.now() / 1000);
         const oneHourAgo = now - 3600;
@@ -1644,8 +1822,6 @@
         });
         
         heatmapSeries.setData(heatmapData);
-        
-        // Guardar referencia para poder eliminarla después
         window.heatmapSeries = heatmapSeries;
       } else if (chart && window.heatmapSeries) {
         chart.removeSeries(window.heatmapSeries);
@@ -1674,7 +1850,6 @@
         LARGE_ORDER_THRESHOLD = parseFloat(largeThresholdInput.value) || 50000000;
         VERY_LARGE_ORDER_THRESHOLD = parseFloat(veryLargeThresholdInput.value) || 100000000;
         
-        // Forzar actualización de tablas
         updateTables();
         showAlert(`Umbrales actualizados: ${formatUsdt(LARGE_ORDER_THRESHOLD)} / ${formatUsdt(VERY_LARGE_ORDER_THRESHOLD)}`, 'volume');
       }
@@ -1693,19 +1868,16 @@
     
     // Inicializar sistema de alertas
     function initAlerts() {
-      // Cargar configuración desde localStorage
       const savedSettings = localStorage.getItem('alertSettings');
       if (savedSettings) {
         Object.assign(ALERT_SETTINGS, JSON.parse(savedSettings));
       }
       
-      // Configurar el botón de sonido según la configuración
       const soundToggle = document.getElementById("sound-toggle");
       if (soundToggle) {
         soundToggle.textContent = ALERT_SETTINGS.soundEnabled ? "🔊 Sonido: ON" : "🔇 Sonido: OFF";
       }
       
-      // Verificar alertas cada 10 segundos
       setInterval(checkAlerts, 10000);
     }
     
@@ -1713,7 +1885,6 @@
     function checkAlerts() {
       if (!markPriceFutures || futuresBidsData.length === 0 || futuresAsksData.length === 0) return;
       
-      // Alerta de Spread
       const spreadText = document.getElementById('market-spread').textContent;
       const spreadMatch = spreadText.match(/\(([\d.]+)%\)/);
       if (spreadMatch) {
@@ -1723,7 +1894,6 @@
         }
       }
       
-      // Alerta de Desequilibrio
       const imbalanceText = document.getElementById('orderbook-imbalance').textContent;
       const imbalance = parseFloat(imbalanceText);
       if (Math.abs(imbalance) > ALERT_SETTINGS.imbalanceAlert) {
@@ -1731,7 +1901,6 @@
         showAlert(`Desequilibrio extremo (${direction}): ${Math.abs(imbalance).toFixed(2)}%`, 'imbalance');
       }
       
-      // Alerta de Volumen
       const bidLiquidityText = document.getElementById('total-bid-liquidity').textContent;
       const askLiquidityText = document.getElementById('total-ask-liquidity').textContent;
       
@@ -1749,11 +1918,10 @@
     
     // Mostrar alerta en el sistema
     function showAlert(message, type) {
-      // Verificar si ya existe una alerta similar
       const existingAlerts = document.querySelectorAll('.market-alert');
       for (const alert of existingAlerts) {
         if (alert.textContent.includes(message.substring(0, 20))) {
-          return; // No mostrar alertas duplicadas
+          return;
         }
       }
       
@@ -1767,12 +1935,10 @@
       
       document.getElementById('alert-container').prepend(alertDiv);
       
-      // Reproducir sonido si está activado
       if (ALERT_SETTINGS.soundEnabled) {
         playAlertSound(type);
       }
       
-      // Auto-eliminar después de 1 minuto
       setTimeout(() => {
         if (alertDiv.parentNode) {
           alertDiv.remove();
@@ -1782,149 +1948,25 @@
     
     // Reproducir sonido de alerta
     function playAlertSound(type) {
-      const audio = new Audio();
-      let soundFile = '';
-      
-      switch(type) {
-        case 'spread':
-          soundFile = 'https://assets.mixkit.co/sfx/preview/mixkit-alert-quick-chime-766.mp3';
-          break;
-        case 'imbalance':
-          soundFile = 'https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3';
-          break;
-        case 'volume':
-          soundFile = 'https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3';
-          break;
-        default:
-          soundFile = 'https://assets.mixkit.co/sfx/preview/mixkit-positive-interface-beep-221.mp3';
-      }
-      
-      audio.src = soundFile;
-      audio.volume = 0.3;
-      audio.play().catch(e => console.log("Error al reproducir sonido:", e));
-    }
-    
-    // Formateadores
-    function formatPrice(price) {
-      const decimals = getDecimals(symbol);
-      return price.toFixed(decimals).replace(/(\.\d+?)0+$/, "$1");
-    }
-    
-    function getDecimals(symbol) {
-      const decimalsMap = {
-        "BTCUSDT": 2,
-        "ETHUSDT": 2,
-        "BNBUSDT": 2,
-        "SOLUSDT": 4,
-        "XRPUSDT": 4,
-        "ADAUSDT": 5,
-        "DOGEUSDT": 5,
-        "DOTUSDT": 3,
-        "MATICUSDT": 4,
-        "LTCUSDT": 2,
-        "AVAXUSDT": 3,
-        "LINKUSDT": 3,
-        "ATOMUSDT": 3,
-        "UNIUSDT": 3,
-        "FILUSDT": 3,
-        "XLMUSDT": 5,
-        "ETCUSDT": 3,
-        "XTZUSDT": 3,
-        "SUSHIUSDT": 3,
-        "AAVEUSDT": 2,
-        "GRTUSDT": 5,
-        "ALGOUSDT": 4,
-        "KSMUSDT": 2,
-        "COMPUSDT": 2,
-        "YFIUSDT": 2,
-        "SNXUSDT": 3,
-        "BALUSDT": 3,
-        "CRVUSDT": 4,
-        "SANDUSDT": 5,
-        "MANAUSDT": 5,
-        "AXSUSDT": 3,
-        "GALAUSDT": 6,
-        "APEUSDT": 4,
-        "PEOPLEUSDT": 6,
-        "ENSUSDT": 3,
-        "ANTUSDT": 3,
-        "GMTUSDT": 4,
-        "APEUSDT": 4,
-        "GALUSDT": 5,
-        "OPUSDT": 4,
-        "INJUSDT": 3,
-        "STGUSDT": 4,
-        "SPELLUSDT": 6,
-        "1000SHIBUSDT": 6,
-        "1000PEPEUSDT": 8,
-        "1000FLOKIUSDT": 7,
-        "1000LUNCUSDT": 6,
-        "1000XECUSDT": 6
-      };
-      
-      return decimalsMap[symbol] || 4;
-    }
-    
-    function formatQuantity(quantity) {
-      if (quantity >= 1000000) return (quantity / 1000000).toFixed(2) + "M";
-      if (quantity >= 1000) return (quantity / 1000).toFixed(2) + "K";
-      return quantity.toFixed(4);
-    }
-    
-    function formatUsdt(value) {
-      if (value >= 1000000000) return (value / 1000000000).toFixed(2) + "B";
-      if (value >= 1000000) return (value / 1000000).toFixed(2) + "M";
-      if (value >= 1000) return (value / 1000).toFixed(2) + "K";
-      return value.toFixed(2);
-    }
-    
-    function formatAge(milliseconds) {
-      if (milliseconds < 0) return "0s";
-      
-      const totalSeconds = Math.floor(milliseconds / 1000);
-      
-      // Menos de 1 minuto: mostrar en segundos
-      if (totalSeconds < 60) return `${totalSeconds}s`;
-      
-      // Menos de 1 hora: mostrar en minutos
-      if (totalSeconds < 3600) return `${Math.floor(totalSeconds / 60)}m`;
-      
-      // Menos de 1 día: mostrar en horas
-      if (totalSeconds < 86400) return `${Math.floor(totalSeconds / 3600)}h`;
-      
-      // Más de 1 día: mostrar en días
-      return `${Math.floor(totalSeconds / 86400)}d`;
-    }
-    
-    function updateTimestamp() {
-      const now = new Date();
-      const offset = -4 * 60 * 60 * 1000; // GMT-4
-      const localTime = new Date(now.getTime() + offset);
-      
-      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
-      
-      const dayName = days[localTime.getUTCDay()];
-      const month = months[localTime.getUTCMonth()];
-      const date = String(localTime.getUTCDate()).padStart(2, '0');
-      const year = localTime.getUTCFullYear();
-      
-      let hours = localTime.getUTCHours();
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12;
-      hours = hours ? hours : 12; // Convertir 0 a 12
-      const minutes = String(localTime.getUTCMinutes()).padStart(2, '0');
-      const seconds = String(localTime.getUTCSeconds()).padStart(2, '0');
-      const milliseconds = String(localTime.getUTCMilliseconds()).padStart(3, '0').slice(0,1);
-      
-      document.getElementById('compact-timestamp').textContent = 
-        `${dayName} ${month}/${date}/${year}, ${hours}:${minutes}:${seconds}.${milliseconds} ${ampm} GMT-04:00`;
-      
-      // Verificar si el precio está actualizado (últimos 5 segundos)
-      if (lastPriceUpdate && (now.getTime() - lastPriceUpdate > 5000)) {
-        document.getElementById("symbol-title").style.color = "#ff5555";
-      } else {
-        document.getElementById("symbol-title").style.color = "#55ff55";
+      // Implementación básica - puedes mejorarla con sonidos personalizados
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.type = 'sine';
+        oscillator.frequency.value = type === 'volume' ? 880 : 440;
+        gainNode.gain.value = 0.1;
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.start();
+        setTimeout(() => {
+          oscillator.stop();
+        }, 300);
+      } catch (e) {
+        console.log('Error al reproducir sonido:', e);
       }
     }
     
@@ -1934,7 +1976,6 @@
         const chartContainer = document.getElementById("chart-container");
         if (!chartContainer) return;
         
-        // Mostrar mensaje de carga
         const loadingMsg = chartContainer.querySelector('.loading-message');
         if (loadingMsg) {
           loadingMsg.style.display = 'block';
@@ -1992,14 +2033,12 @@
           title: 'EMA 100',
         });
         
-        // Configurar auto-centrado periódico
         setInterval(() => {
           if (chart) {
             chart.timeScale().fitContent();
           }
         }, 30000);
         
-        // Ocultar mensaje de carga cuando el gráfico esté listo
         if (loadingMsg) {
           loadingMsg.textContent = "Cargando datos...";
         }
@@ -2045,7 +2084,7 @@
           chart.timeScale().fitContent();
           
           const loadingMsg = document.querySelector('.loading-message');
-          if (loadingMsg) loadingMsg.style.display = 'none';
+        if (loadingMsg) loadingMsg.style.display = 'none';
         }
       } catch (err) {
         showError(`Error al cargar el historial de velas: ${err.message}`);
@@ -2142,8 +2181,7 @@
     }
     
     function togglePriceSelection(price, isAsk, checkbox) {
-      startInteraction();
-  
+
       if (checkbox.checked) {
         if (!selectedPrices.has(price)) {
           drawSelectedPriceLine(price, isAsk);
@@ -2160,11 +2198,6 @@
           bidsPriceMap.delete(price);
         }
       }
-  
-      updateTables();
-  
-  // Pequeño retraso antes de terminar la interacción para permitir selecciones múltiples
-      setTimeout(endInteraction, 300);
     }
     
     function saveSelectedPrices() {
@@ -2224,6 +2257,124 @@
       }
     }
     
+    // Formateadores
+    function formatPrice(price) {
+      const decimals = getDecimals(symbol);
+      return price.toFixed(decimals).replace(/(\.\d+?)0+$/, "$1");
+    }
+    
+    function getDecimals(symbol) {
+      const decimalsMap = {
+        "BTCUSDT": 2,
+        "ETHUSDT": 2,
+        "BNBUSDT": 2,
+        "SOLUSDT": 4,
+        "XRPUSDT": 4,
+        "ADAUSDT": 5,
+        "DOGEUSDT": 5,
+        "DOTUSDT": 3,
+        "MATICUSDT": 4,
+        "LTCUSDT": 2,
+        "AVAXUSDT": 3,
+        "LINKUSDT": 3,
+        "ATOMUSDT": 3,
+        "UNIUSDT": 3,
+        "FILUSDT": 3,
+        "XLMUSDT": 5,
+        "ETCUSDT": 3,
+        "XTZUSDT": 3,
+        "SUSHIUSDT": 3,
+        "AAVEUSDT": 2,
+        "GRTUSDT": 5,
+        "ALGOUSDT": 4,
+        "KSMUSDT": 2,
+        "COMPUSDT": 2,
+        "YFIUSDT": 2,
+        "SNXUSDT": 3,
+        "BALUSDT": 3,
+        "CRVUSDT": 4,
+        "SANDUSDT": 5,
+        "MANAUSDT": 5,
+        "AXSUSDT": 3,
+        "GALAUSDT": 6,
+        "APEUSDT": 4,
+        "PEOPLEUSDT": 6,
+        "ENSUSDT": 3,
+        "ANTUSDT": 3,
+        "GMTUSDT": 4,
+        "GALUSDT": 5,
+        "OPUSDT": 4,
+        "INJUSDT": 3,
+        "STGUSDT": 4,
+        "SPELLUSDT": 6,
+        "1000SHIBUSDT": 6,
+        "1000PEPEUSDT": 8,
+        "1000FLOKIUSDT": 7,
+        "1000LUNCUSDT": 6,
+        "1000XECUSDT": 6
+      };
+      
+      return decimalsMap[symbol] || 4;
+    }
+    
+    function formatQuantity(quantity) {
+      if (quantity >= 1000000) return (quantity / 1000000).toFixed(2) + "M";
+      if (quantity >= 1000) return (quantity / 1000).toFixed(2) + "K";
+      return quantity.toFixed(4);
+    }
+    
+    function formatUsdt(value) {
+      if (value >= 1000000000) return (value / 1000000000).toFixed(2) + "B";
+      if (value >= 1000000) return (value / 1000000).toFixed(2) + "M";
+      if (value >= 1000) return (value / 1000).toFixed(2) + "K";
+      return value.toFixed(2);
+    }
+    
+    function formatAge(milliseconds) {
+      if (milliseconds < 0) return "0s";
+      
+      const totalSeconds = Math.floor(milliseconds / 1000);
+      
+      if (totalSeconds < 60) return `${totalSeconds}s`;
+      
+      if (totalSeconds < 3600) return `${Math.floor(totalSeconds / 60)}m`;
+      
+      if (totalSeconds < 86400) return `${Math.floor(totalSeconds / 3600)}h`;
+      
+      return `${Math.floor(totalSeconds / 86400)}d`;
+    }
+    
+    function updateTimestamp() {
+      const now = new Date();
+      const offset = -4 * 60 * 60 * 1000; // GMT-4
+      const localTime = new Date(now.getTime() + offset);
+      
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+      
+      const dayName = days[localTime.getUTCDay()];
+      const month = months[localTime.getUTCMonth()];
+      const date = String(localTime.getUTCDate()).padStart(2, '0');
+      const year = localTime.getUTCFullYear();
+      
+      let hours = localTime.getUTCHours();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      const minutes = String(localTime.getUTCMinutes()).padStart(2, '0');
+      const seconds = String(localTime.getUTCSeconds()).padStart(2, '0');
+      const milliseconds = String(localTime.getUTCMilliseconds()).padStart(3, '0').slice(0,1);
+      
+      document.getElementById('compact-timestamp').textContent = 
+        `${dayName} ${month}/${date}/${year}, ${hours}:${minutes}:${seconds}.${milliseconds} ${ampm} GMT-04:00`;
+      
+      if (lastPriceUpdate && (now.getTime() - lastPriceUpdate > 5000)) {
+        document.getElementById("symbol-title").style.color = "#ff5555";
+      } else {
+        document.getElementById("symbol-title").style.color = "#55ff55";
+      }
+    }
+    
     // Manejo de errores
     function showError(message) {
       errorMessageElement.textContent = message;
@@ -2236,48 +2387,15 @@
     
     function updateWsStatus(message) {
       const statusElement = document.getElementById("ws-status");
-      if (statusElement) {
-        statusElement.textContent = message;
-        
-        const spinner = statusElement.querySelector('.spinner');
-        if (spinner) {
-          spinner.style.display = message.includes('Conectado') ? 'none' : 'inline-block';
-        }
-      }
+      if (!statusElement) return;
+
+      const isConnected = message.includes("Conectado");
+
+      statusElement.innerHTML =
+        `${message} <span class="spinner" style="display:${isConnected ? 'none' : 'inline-block'}"></span>`;
     }
     
-    // Configurar eventos
-    function setupEventListeners() {
-      const asksBody = document.getElementById("asks-body");
-      const bidsBody = document.getElementById("bids-body");
-      
-      if (asksBody) {
-        asksBody.addEventListener('click', handleTableClick);
-        asksBody.addEventListener('mousedown', handleTableMouseDown);
-      }
-      
-      if (bidsBody) {
-        bidsBody.addEventListener('click', handleTableClick);
-        bidsBody.addEventListener('mousedown', handleTableMouseDown);
-      }
-      
-      document.getElementById('symbol-search').addEventListener('change', (e) => {
-        const selectedSymbol = e.target.value.toUpperCase();
-        if (selectedSymbol) {
-          window.location.href = `?symbol=${selectedSymbol}`;
-        }
-      });
-      
-      document.getElementById('interval-select').addEventListener('change', changeChartInterval);
-      
-      window.addEventListener('resize', () => {
-        if (chart) {
-          chart.resize(document.getElementById("chart-container").offsetWidth, 500);
-          redrawSelectedLines();
-        }
-      });
-    }
-    
+    // Configurar eventos  
     function handleTableMouseDown(event) {
       const cell = event.target.closest('.price-cell');
       if (!cell) return;
@@ -2302,6 +2420,18 @@
       
       copyPriceCell({target: cell});
     }
+
+    function handleSelectClick(event, price, isAsk) {
+      event.stopPropagation();
+
+      const td = event.currentTarget;
+      const checkbox = td.querySelector(".selection-checkbox");
+      if (!checkbox) return;
+
+      checkbox.checked = !checkbox.checked;
+      togglePriceSelection(price, isAsk, checkbox);
+    }
+
     
     function copyPriceCell(event) {
       const cell = event.target.closest('.price-cell');
@@ -2346,7 +2476,7 @@
         document.body.removeChild(textArea);
       }
     }
-    
+
     // Inicialización
     function init() {
       loadSelectedPrices();
@@ -2357,14 +2487,11 @@
       initAlerts();
       
       // Exponer funciones globales
-      window.startInteraction = startInteraction;
-      window.endInteraction = endInteraction;
-      window.togglePriceSelection = togglePriceSelection;
+      window.toggleClusters = toggleClusters;
       window.togglePriceSelection = togglePriceSelection;
       window.autoScaleChart = autoScaleChart;
       window.updateThresholds = updateThresholds;
       window.toggleSoundAlerts = toggleSoundAlerts;
-      window.showLiquidityClusters = showLiquidityClusters;
       window.toggleLiquidityHeatmap = toggleLiquidityHeatmap;
       window.saveKeyLevels = saveKeyLevels;
       window.copyPriceCell = copyPriceCell;
