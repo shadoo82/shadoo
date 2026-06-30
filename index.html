@@ -1488,6 +1488,8 @@ async function loadHistoricalKlines() {
             if (window.SMC) {
                 SMC._clearOBRects();  // limpiar antes de redibujar
                 SMC.update();
+                // VRVP: redibujar si está activo (datos ya cargados aquí)
+                if (SMC.cfg.showVRVP) SMC._drawVRVP();
             }
         }, 800);
         // Zonas: solo manual — no auto-refresh al cargar par
@@ -1530,6 +1532,7 @@ function changeChartInterval() {
         .then(() => {
             // Reconectar WS kline después de cargar datos
             if (wsManager) wsManager.connectKline(currentInterval);
+            // VRVP se redibuja dentro de loadHistoricalKlines cuando los datos están listos
         })
         .catch(e => {
             console.error('Error cargando intervalo:', e);
@@ -5449,6 +5452,15 @@ const SMC = {
         showOB:     false,
         showAOI:    false,
         show4H1D:   false,
+        // ── VRVP ──
+        showVRVP:   false,
+        vrvrRows:   150,
+        vrvrSide:   'right',
+        vrvrWidth:  150,
+        vrvrVA:     70,
+        vrvrColorPOC: '#ff5252',
+        vrvrColorVA:  '#64b5f6',
+        vrvrColorOut: '#3a7abf',
     },
 
     // ── Estado ──
@@ -5873,8 +5885,8 @@ const SMC = {
         }
         this.priceLines = [];
         this.alertZones = [];
-        // Limpiar VRVP SVG
-        this._clearVRVP();
+        // VRVP: NO limpiar aquí — es independiente de FVG/OB/Fibs
+        // Se redibuja solo si estaba activo (no se interrumpe al activar otros tools)
         // Limpiar FVG SVG
         const fvgSvg = document.getElementById('smc-fvg-svg');
         if (fvgSvg) fvgSvg.remove();
@@ -5921,10 +5933,10 @@ const SMC = {
         cont.appendChild(svg);
 
         var scaleW  = 65;
-        var rows    = SMC.cfg.vrvrRows  || 150;
-        var maxW    = SMC.cfg.vrvrWidth || 90;
-        var vaPCT   = (SMC.cfg.vrvrVA   || 70) / 100;
-        var side    = SMC.cfg.vrvrSide  || 'right';
+        var rows  = SMC.cfg.vrvrRows  || 150;
+        var maxW  = SMC.cfg.vrvrWidth || 150;
+        var vaPCT = (SMC.cfg.vrvrVA   || 70) / 100;
+        var side  = SMC.cfg.vrvrSide  || 'right';
 
         var redraw = function() {
             svg.innerHTML = '';
@@ -5999,9 +6011,16 @@ const SMC = {
                     var isVA  = idx >= vaLow && idx <= vaHigh;
                     var x     = side === 'right' ? (chartW - barW) : 0;
 
-                    var fill = isPOC ? 'rgba(255,82,82,0.90)'
-                             : isVA  ? 'rgba(100,180,255,0.55)'
-                             :         'rgba(100,180,255,0.25)';
+                    var cPOC2 = SMC.cfg.vrvrColorPOC || '#ff5252';
+                    var cVA2  = SMC.cfg.vrvrColorVA  || '#64b5f6';
+                    var cOut2 = SMC.cfg.vrvrColorOut || '#3a7abf';
+                    var hexToRgba = function(hex, a) {
+                        var r = parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+                        return 'rgba('+r+','+g+','+b+','+a+')';
+                    };
+                    var fill = isPOC ? hexToRgba(cPOC2, 0.90)
+                             : isVA  ? hexToRgba(cVA2,  0.55)
+                             :         hexToRgba(cOut2, 0.30);
 
                     var rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
                     rect.setAttribute('x', x);
@@ -6012,20 +6031,38 @@ const SMC = {
                     svg.appendChild(rect);
                 });
 
+                // ── Colores desde cfg ──
+                var cPOC = SMC.cfg.vrvrColorPOC || '#ff5252';
+                var cVA  = SMC.cfg.vrvrColorVA  || '#64b5f6';
+
+                // ── Línea POC horizontal hasta el centro del gráfico ──
+                var pocY = candlestickSeries.priceToCoordinate(buckets[pocIdx].price);
+                if (pocY !== null) {
+                    var pocLineX1 = side === 'right' ? chartW / 2 : maxW;
+                    var pocLineX2 = side === 'right' ? chartW - maxW : chartW / 2;
+                    var pocLine = document.createElementNS('http://www.w3.org/2000/svg','line');
+                    pocLine.setAttribute('x1', pocLineX1); pocLine.setAttribute('x2', pocLineX2);
+                    pocLine.setAttribute('y1', pocY);      pocLine.setAttribute('y2', pocY);
+                    pocLine.setAttribute('stroke', cPOC);
+                    pocLine.setAttribute('stroke-width','1.5');
+                    pocLine.setAttribute('stroke-dasharray','6,3');
+                    svg.appendChild(pocLine);
+                }
+
                 // ── Labels POC / VAH / VAL ──
-                var lblX = side === 'right' ? chartW - maxW - 2 : maxW + 2;
                 var anchor = side === 'right' ? 'end' : 'start';
 
                 var addLabel = function(price, txt, color) {
                     var y2 = candlestickSeries.priceToCoordinate(price);
                     if (y2 === null) return;
+                    var lblX2 = side === 'right' ? chartW - maxW - 2 : maxW + 2;
                     var bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
-                    bg.setAttribute('x', side==='right'? chartW-maxW-38 : 0);
-                    bg.setAttribute('y', y2-8); bg.setAttribute('width',38); bg.setAttribute('height',14);
-                    bg.setAttribute('fill','rgba(8,10,22,0.9)'); bg.setAttribute('rx','2');
+                    bg.setAttribute('x', side==='right'? lblX2-36 : lblX2);
+                    bg.setAttribute('y', y2-8); bg.setAttribute('width',36); bg.setAttribute('height',14);
+                    bg.setAttribute('fill','rgba(8,10,22,0.92)'); bg.setAttribute('rx','2');
                     svg.appendChild(bg);
                     var t = document.createElementNS('http://www.w3.org/2000/svg','text');
-                    t.setAttribute('x', side==='right'? chartW-maxW-1 : maxW+1);
+                    t.setAttribute('x', side==='right'? lblX2-2 : lblX2+2);
                     t.setAttribute('y', y2+3);
                     t.setAttribute('fill', color); t.setAttribute('font-size','9');
                     t.setAttribute('font-weight','bold'); t.setAttribute('font-family','Consolas,monospace');
@@ -6034,9 +6071,9 @@ const SMC = {
                     svg.appendChild(t);
                 };
 
-                addLabel(buckets[pocIdx].price,    'POC', '#ff5252');
-                addLabel(buckets[vaHigh].price + bucketSize/2, 'VAH', '#64b5f6');
-                addLabel(buckets[vaLow].price  - bucketSize/2, 'VAL', '#64b5f6');
+                addLabel(buckets[pocIdx].price,              'POC', cPOC);
+                addLabel(buckets[vaHigh].price + bucketSize/2,'VAH', cVA);
+                addLabel(buckets[vaLow].price  - bucketSize/2,'VAL', cVA);
 
             } catch(e) { console.warn('VRVP redraw error:', e); }
         };
@@ -6320,6 +6357,10 @@ const SMC = {
     draw(candles) {
         this.clearLines();
         if (!candles.length || !candlestickSeries) return;
+        // VRVP: redibujar si estaba activo y fue interrumpido
+        if (this.cfg.showVRVP && !document.getElementById('smc-vrvp-svg')) {
+            setTimeout(() => this._drawVRVP(), 100);
+        }
         // OB
         if (this.cfg.showOB) {
             const obs = this.getOrderBlocks(candles);
@@ -6479,20 +6520,20 @@ const SMC = {
                         <span>Filas</span>
                         <div style="display:inline-flex;align-items:center;gap:2px;background:rgba(255,255,255,0.05);border:1px solid #3a3a5a;border-radius:4px;padding:1px 3px;">
                             <button style="background:rgba(255,255,255,0.08);border:1px solid #555;color:#ffd54f;width:16px;height:16px;border-radius:3px;cursor:pointer;font-size:11px;line-height:1;padding:0;"
-                                onclick="SMC.cfg.vrvrRows=Math.max(30,SMC.cfg.vrvrRows-20);document.getElementById('vrvp-rows').textContent=SMC.cfg.vrvrRows;if(SMC.cfg.showVRVP)SMC._drawVRVP();">−</button>
+                                onclick="SMC.cfg.vrvrRows=Math.max(30,SMC.cfg.vrvrRows-50);document.getElementById('vrvp-rows').textContent=SMC.cfg.vrvrRows;if(SMC.cfg.showVRVP)SMC._drawVRVP();">−</button>
                             <span id="vrvp-rows" style="width:28px;text-align:center;color:#ffd54f;font-weight:bold;">${SMC.cfg.vrvrRows}</span>
                             <button style="background:rgba(255,255,255,0.08);border:1px solid #555;color:#ffd54f;width:16px;height:16px;border-radius:3px;cursor:pointer;font-size:11px;line-height:1;padding:0;"
-                                onclick="SMC.cfg.vrvrRows=Math.min(500,SMC.cfg.vrvrRows+20);document.getElementById('vrvp-rows').textContent=SMC.cfg.vrvrRows;if(SMC.cfg.showVRVP)SMC._drawVRVP();">+</button>
+                                onclick="SMC.cfg.vrvrRows=Math.min(2000,SMC.cfg.vrvrRows+50);document.getElementById('vrvp-rows').textContent=SMC.cfg.vrvrRows;if(SMC.cfg.showVRVP)SMC._drawVRVP();">+</button>
                         </div>
                     </div>
                     <div style="display:flex;flex-direction:column;gap:2px;">
                         <span>Ancho px</span>
                         <div style="display:inline-flex;align-items:center;gap:2px;background:rgba(255,255,255,0.05);border:1px solid #3a3a5a;border-radius:4px;padding:1px 3px;">
                             <button style="background:rgba(255,255,255,0.08);border:1px solid #555;color:#ffd54f;width:16px;height:16px;border-radius:3px;cursor:pointer;font-size:11px;line-height:1;padding:0;"
-                                onclick="SMC.cfg.vrvrWidth=Math.max(40,SMC.cfg.vrvrWidth-10);document.getElementById('vrvp-width').textContent=SMC.cfg.vrvrWidth;if(SMC.cfg.showVRVP)SMC._drawVRVP();">−</button>
+                                onclick="SMC.cfg.vrvrWidth=Math.max(40,SMC.cfg.vrvrWidth-20);document.getElementById('vrvp-width').textContent=SMC.cfg.vrvrWidth;if(SMC.cfg.showVRVP)SMC._drawVRVP();">−</button>
                             <span id="vrvp-width" style="width:28px;text-align:center;color:#ffd54f;font-weight:bold;">${SMC.cfg.vrvrWidth}</span>
                             <button style="background:rgba(255,255,255,0.08);border:1px solid #555;color:#ffd54f;width:16px;height:16px;border-radius:3px;cursor:pointer;font-size:11px;line-height:1;padding:0;"
-                                onclick="SMC.cfg.vrvrWidth=Math.min(200,SMC.cfg.vrvrWidth+10);document.getElementById('vrvp-width').textContent=SMC.cfg.vrvrWidth;if(SMC.cfg.showVRVP)SMC._drawVRVP();">+</button>
+                                onclick="SMC.cfg.vrvrWidth=Math.min(500,SMC.cfg.vrvrWidth+20);document.getElementById('vrvp-width').textContent=SMC.cfg.vrvrWidth;if(SMC.cfg.showVRVP)SMC._drawVRVP();">+</button>
                         </div>
                     </div>
                     <div style="display:flex;flex-direction:column;gap:2px;">
@@ -6505,6 +6546,25 @@ const SMC = {
                                 onclick="SMC.cfg.vrvrVA=Math.min(100,SMC.cfg.vrvrVA+5);document.getElementById('vrvp-va').textContent=SMC.cfg.vrvrVA;if(SMC.cfg.showVRVP)SMC._drawVRVP();">+</button>
                         </div>
                     </div>
+                </div>
+                <!-- Colores -->
+                <div style="display:flex;gap:6px;align-items:center;margin-top:5px;flex-wrap:wrap;">
+                    <span style="color:#666;font-size:9px;">Color:</span>
+                    <label style="display:flex;align-items:center;gap:3px;font-size:9px;color:#aaa;cursor:pointer;">
+                        POC <input type="color" value="${SMC.cfg.vrvrColorPOC||'#ff5252'}"
+                            style="width:22px;height:16px;border:none;padding:0;background:none;cursor:pointer;"
+                            oninput="SMC.cfg.vrvrColorPOC=this.value;if(SMC.cfg.showVRVP)SMC._drawVRVP();">
+                    </label>
+                    <label style="display:flex;align-items:center;gap:3px;font-size:9px;color:#aaa;cursor:pointer;">
+                        VA <input type="color" value="${SMC.cfg.vrvrColorVA||'#64b5f6'}"
+                            style="width:22px;height:16px;border:none;padding:0;background:none;cursor:pointer;"
+                            oninput="SMC.cfg.vrvrColorVA=this.value;if(SMC.cfg.showVRVP)SMC._drawVRVP();">
+                    </label>
+                    <label style="display:flex;align-items:center;gap:3px;font-size:9px;color:#aaa;cursor:pointer;">
+                        Fuera VA <input type="color" value="${SMC.cfg.vrvrColorOut||'#3a7abf'}"
+                            style="width:22px;height:16px;border:none;padding:0;background:none;cursor:pointer;"
+                            oninput="SMC.cfg.vrvrColorOut=this.value;if(SMC.cfg.showVRVP)SMC._drawVRVP();">
+                    </label>
                 </div>
             </div>
             <div id="smc-levels" style="padding:4px 10px;font-size:9px;color:#666;">Sin niveles activos</div>
